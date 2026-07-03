@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://lumiscan:lumiscan@localhost:5432/lumiscan
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: lumiscan-dev
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      ANTHROPIC_API_KEY: sk-ant-ci
+      APP_URL: http://localhost:3000
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lumiscan
+          POSTGRES_PASSWORD: lumiscan
+          POSTGRES_DB: lumiscan
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U lumiscan -d lumiscan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - run: "! rg -n \"ANTHROPIC_API_KEY|sk-ant-|sk_live|lsk_\" --glob '!pnpm-lock.yaml' ."
