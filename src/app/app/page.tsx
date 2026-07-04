@@ -1,10 +1,19 @@
 import Link from "next/link";
-import { Plus, ScanLine } from "lucide-react";
+import {
+  ChevronRight,
+  Plus,
+  ScanLine,
+  ShieldAlert,
+  UsersRound,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
 import { classificationColor } from "@/lib/enums";
-import { formatDate, formatPercent } from "@/lib/utils";
+import { formatDate, formatLesionSite, formatPercent, humanize } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { dashboardService } from "@/server/services/dashboard";
 
@@ -15,78 +24,91 @@ export default async function DashboardPage() {
   const overview = await dashboardService.overview(ctx);
 
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted">
-            Org-scoped clinical activity and recent flagged lesions.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/app/patients/new">
-            <Plus className="h-4 w-4" /> Patient
-          </Link>
-        </Button>
-      </div>
+    <div className="grid gap-7">
+      <PageHeader
+        title="Dashboard"
+        description="Organization-scoped clinical activity, surfacing lesions that need attention."
+        actions={
+          <Button asChild>
+            <Link href="/app/patients/new">
+              <Plus /> New patient
+            </Link>
+          </Button>
+        }
+      />
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted">Patients</p>
-            <p className="mt-2 text-3xl font-semibold">{overview.counts.patients}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted">Flagged lesions</p>
-            <p className="mt-2 text-3xl font-semibold">
-              {overview.counts.flaggedLesions}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted">Recent scan rows</p>
-            <p className="mt-2 text-3xl font-semibold">
-              {overview.counts.recentScans}
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Patients"
+          value={overview.counts.patients}
+          hint="Active in this organization"
+          icon={UsersRound}
+          tone="teal"
+        />
+        <StatCard
+          label="Flagged lesions"
+          value={overview.counts.flaggedLesions}
+          hint="Suspicious or malignant risk"
+          icon={ShieldAlert}
+          tone={overview.counts.flaggedLesions > 0 ? "amber" : "slate"}
+        />
+        <StatCard
+          label="Recent flagged scans"
+          value={overview.counts.recentScans}
+          hint="Across monitored lesions"
+          icon={ScanLine}
+          tone="teal"
+        />
       </section>
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold">Recent flagged scans</h2>
+          <CardTitle>Recent flagged scans</CardTitle>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/app/patients">
+              View patients <ChevronRight />
+            </Link>
+          </Button>
         </CardHeader>
-        <CardContent>
-          {overview.recentScans.length === 0 ? (
-            <div className="grid place-items-center gap-3 py-12 text-center">
-              <ScanLine className="h-8 w-8 text-muted" />
-              <p className="text-sm text-muted">
-                No flagged scan activity in this organization.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {overview.recentScans.map((row) => (
+        {overview.recentScans.length === 0 ? (
+          <EmptyState
+            icon={ScanLine}
+            title="No flagged scan activity"
+            description="Suspicious and malignant scans from across your organization will appear here."
+          />
+        ) : (
+          <ul className="divide-y divide-border">
+            {overview.recentScans.map((row) => (
+              <li key={row.scan.id}>
                 <Link
-                  key={row.scan.id}
                   href={`/app/patients/${row.lesion.patientId}/lesions/${row.scan.lesionId}`}
-                  className="flex items-center justify-between rounded-md border border-border p-3 hover:bg-zinc-50"
+                  className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
                 >
-                  <div>
-                    <p className="text-sm font-medium">{formatDate(row.scan.capturedAt)}</p>
-                    <p className="text-xs text-muted">{row.scan.source}</p>
+                  <span
+                    className={`size-2.5 shrink-0 rounded-full ${
+                      row.classification.label === "MALIGNANT"
+                        ? "bg-red-500"
+                        : "bg-amber-500"
+                    }`}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {formatLesionSite(row.lesion.bodySide, row.lesion.bodyRegion)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-faint">
+                      {formatDate(row.scan.capturedAt)} · {humanize(row.scan.source)}
+                    </p>
                   </div>
-                  <Badge tone={classificationColor[row.classification.label]}>
+                  <Badge tone={classificationColor[row.classification.label]} dot>
                     {row.classification.label} {formatPercent(row.classification.confidence)}
                   </Badge>
+                  <ChevronRight className="size-4 shrink-0 text-faint" />
                 </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
