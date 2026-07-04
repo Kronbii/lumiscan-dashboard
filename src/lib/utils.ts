@@ -19,3 +19,18 @@ export function formatDate(value: Date | string) {
     year: "numeric",
   }).format(new Date(value));
 }
+
+export function humanize(value: string | null | undefined) {
+  if (!value) return "";
+  const lower = value.replaceAll("_", " ").toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+export function formatLesionSite(side: string, region: string) {
+  const regionText = humanize(region);
+  const regionEncodesSide =
+    region.startsWith("LEFT_") || region.startsWith("RIGHT_");
+  if (regionEncodesSide || side === "UNSPECIFIED") return regionText;
+  if (side === "MIDLINE") return `Midline ${regionText.toLowerCase()}`;
+  return `${humanize(side)} ${regionText.toLowerCase()}`;
+}
