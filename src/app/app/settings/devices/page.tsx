@@ -1,10 +1,12 @@
-import { Copy, ExternalLink } from "lucide-react";
+import { ExternalLink, KeyRound, MonitorCog } from "lucide-react";
 import Link from "next/link";
 import { createDeviceAction, revokeDeviceAction } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Field, inputClass } from "@/components/ui/field";
+import { PageHeader } from "@/components/ui/page-header";
 import { getOrgContext } from "@/server/auth/org-context";
 import { deviceService } from "@/server/services/device";
 
@@ -20,87 +22,104 @@ export default async function DevicesPage({
   const devices = await deviceService.list(ctx);
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Devices</h1>
-        <p className="mt-1 text-sm text-muted">
-          Manual entry works today; live firmware ingestion uses the documented
-          REST contract.
-        </p>
-      </div>
+    <div className="grid gap-7">
+      <PageHeader
+        title="Devices"
+        description="Register dermatoscopes for live firmware ingestion over the documented REST contract."
+        actions={
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/docs/device-ingestion-api.md">
+              <ExternalLink /> API contract
+            </Link>
+          </Button>
+        }
+      />
 
       {params.newKey ? (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="grid gap-2">
-            <div className="flex items-center gap-2">
-              <Copy className="h-4 w-4" />
-              <p className="font-semibold">Device key</p>
+            <div className="flex items-center gap-2 text-amber-800">
+              <KeyRound className="size-4" />
+              <p className="text-sm font-semibold">Device key — copy it now</p>
             </div>
-            <code className="break-all rounded-md bg-white p-3 text-sm">
+            <code className="block break-all rounded-lg border border-amber-200 bg-white p-3 font-mono text-sm text-foreground">
               {params.newKey}
             </code>
+            <p className="text-xs text-amber-700">
+              This key is shown only once and cannot be recovered.
+            </p>
           </CardContent>
         </Card>
       ) : null}
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold">Register device</h2>
+          <CardTitle>Register a device</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createDeviceAction} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+          <form
+            action={createDeviceAction}
+            className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          >
             <Field label="Name">
-              <input className={inputClass} name="name" required />
+              <input className={inputClass} name="name" placeholder="Exam Room 1" required />
             </Field>
             <Field label="Serial">
-              <input className={inputClass} name="serial" required />
+              <input className={inputClass} name="serial" placeholder="LSK-…" required />
             </Field>
-            <div className="flex items-end">
-              <Button type="submit">Register</Button>
-            </div>
+            <Button type="submit">Register</Button>
           </form>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <h2 className="font-semibold">Registered devices</h2>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/docs/device-ingestion-api.md">
-              <ExternalLink className="h-4 w-4" /> Contract
-            </Link>
-          </Button>
+        <CardHeader>
+          <CardTitle>Registered devices</CardTitle>
+          {devices.length > 0 ? (
+            <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-muted">
+              {devices.length}
+            </span>
+          ) : null}
         </CardHeader>
-        <CardContent className="grid gap-3">
-          {devices.length === 0 ? (
-            <p className="text-sm text-muted">No devices registered.</p>
-          ) : (
-            devices.map((device) => (
-              <div
+        {devices.length === 0 ? (
+          <EmptyState
+            icon={MonitorCog}
+            title="No devices registered"
+            description="Register a dermatoscope to enable automated scan ingestion."
+          />
+        ) : (
+          <ul className="divide-y divide-border">
+            {devices.map((device) => (
+              <li
                 key={device.id}
-                className="flex items-center justify-between gap-3 rounded-md border border-border p-3"
+                className="flex items-center justify-between gap-3 px-5 py-4"
               >
-                <div>
-                  <p className="font-medium">{device.name}</p>
-                  <p className="text-sm text-muted">{device.serial}</p>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-3 text-muted">
+                    <MonitorCog className="size-[1.15rem]" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{device.name}</p>
+                    <p className="font-mono text-xs text-faint">{device.serial}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={device.status === "ACTIVE" ? "green" : "grey"}>
+                <div className="flex items-center gap-3">
+                  <Badge tone={device.status === "ACTIVE" ? "green" : "grey"} dot>
                     {device.status}
                   </Badge>
                   {device.status === "ACTIVE" ? (
                     <form action={revokeDeviceAction}>
                       <input type="hidden" name="id" value={device.id} />
-                      <Button type="submit" variant="outline" size="sm">
+                      <Button type="submit" variant="ghost" size="sm">
                         Revoke
                       </Button>
                     </form>
                   ) : null}
                 </div>
-              </div>
-            ))
-          )}
-        </CardContent>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
