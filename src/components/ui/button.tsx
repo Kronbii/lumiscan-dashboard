@@ -4,19 +4,25 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-all duration-150 outline-none disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-teal-800",
-        outline: "border border-border bg-surface hover:bg-zinc-50",
-        ghost: "hover:bg-zinc-100",
-        danger: "bg-red-700 text-white hover:bg-red-800",
+        default:
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover hover:shadow-md",
+        secondary:
+          "border border-border-strong bg-surface text-foreground shadow-xs hover:bg-surface-2",
+        outline:
+          "border border-border-strong bg-transparent text-foreground hover:bg-surface-2",
+        ghost: "text-muted hover:bg-surface-3 hover:text-foreground",
+        soft: "bg-primary-soft text-primary-soft-foreground hover:brightness-[0.97]",
+        danger: "bg-red-600 text-white shadow-sm hover:bg-red-700",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 px-3 text-xs",
-        icon: "h-9 w-9 px-0",
+        sm: "h-8 gap-1.5 px-3 text-[0.8125rem] [&_svg]:size-3.5",
+        default: "h-10 px-4 text-sm [&_svg]:size-4",
+        lg: "h-11 px-5 text-sm [&_svg]:size-4",
+        icon: "size-9 [&_svg]:size-4",
       },
     },
     defaultVariants: {
@@ -44,3 +50,5 @@ export function Button({
     <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />
   );
 }
+
+export { buttonVariants };
