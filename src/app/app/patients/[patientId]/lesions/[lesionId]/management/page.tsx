@@ -1,18 +1,29 @@
 import Link from "next/link";
+import { NotebookPen } from "lucide-react";
 import {
   addManagementNoteAction,
   setManagementStatusAction,
 } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Field, inputClass } from "@/components/ui/field";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { managementStatuses } from "@/lib/enums";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
+import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
 
 export const dynamic = "force-dynamic";
+
+const statusTone = {
+  MONITORING: "teal",
+  BIOPSY_RECOMMENDED: "amber",
+  REFERRED: "amber",
+  RESOLVED: "green",
+} as const;
 
 export default async function ManagementPage({
   params,
@@ -21,74 +32,104 @@ export default async function ManagementPage({
 }) {
   const { patientId, lesionId } = await params;
   const ctx = await getOrgContext();
+  const lesion = await lesionService.getById(ctx, lesionId);
   const plan = await managementService.getPlan(ctx, lesionId);
   const notes = await managementService.listNotes(ctx, lesionId);
   const canManage = ctx.role !== "NURSE";
+  const status = plan?.status ?? "MONITORING";
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);
   const addNoteAction = addManagementNoteAction.bind(null, patientId, lesionId);
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-6">
-      <div>
-        <Link
-          href={`/app/patients/${patientId}/lesions/${lesionId}`}
-          className="text-sm text-teal-800"
-        >
-          Back to lesion
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Management plan</h1>
-      </div>
+    <div className="mx-auto grid max-w-4xl gap-7">
+      <PageHeader
+        eyebrow={
+          <Link
+            href={`/app/patients/${patientId}/lesions/${lesionId}`}
+            className="hover:text-muted"
+          >
+            ← {formatLesionSite(lesion.bodySide, lesion.bodyRegion)}
+          </Link>
+        }
+        title="Management plan"
+        description="Track follow-up status and clinical notes for this lesion."
+      />
+
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Follow-up status</h2>
-            <Badge tone="amber">{plan?.status ?? "MONITORING"}</Badge>
-          </div>
+          <CardTitle>Follow-up status</CardTitle>
+          <Badge tone={statusTone[status]} dot>
+            {status.replaceAll("_", " ")}
+          </Badge>
         </CardHeader>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-5">
           {canManage ? (
             <>
-              <form action={setStatusAction} className="flex gap-2">
-                <select className={inputClass} name="status" defaultValue={plan?.status ?? "MONITORING"}>
-                  {managementStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status.replaceAll("_", " ")}
+              <form action={setStatusAction} className="flex flex-wrap gap-2">
+                <select
+                  className={`${inputClass} sm:max-w-xs`}
+                  name="status"
+                  defaultValue={status}
+                >
+                  {managementStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replaceAll("_", " ")}
                     </option>
                   ))}
                 </select>
-                <Button type="submit">Save</Button>
+                <Button type="submit" variant="secondary">
+                  Save status
+                </Button>
               </form>
-              <form action={addNoteAction} className="grid gap-3">
-                <Field label="Note">
-                  <textarea className={inputClass} name="body" rows={4} required />
+              <form action={addNoteAction} className="grid gap-2 border-t border-border pt-5">
+                <Field label="Add a follow-up note">
+                  <textarea
+                    className={textareaClass}
+                    name="body"
+                    rows={4}
+                    placeholder="Document the clinical decision, plan, or observation…"
+                    required
+                  />
                 </Field>
-                <Button type="submit" variant="outline">
+                <Button type="submit" className="justify-self-start">
                   Add note
                 </Button>
               </form>
             </>
           ) : (
-            <p className="text-sm text-muted">Read-only for Assistant role.</p>
+            <p className="text-sm text-muted">Read-only for the Nurse role.</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold">Notes</h2>
+          <CardTitle>Notes</CardTitle>
+          {notes.length > 0 ? (
+            <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-muted">
+              {notes.length}
+            </span>
+          ) : null}
         </CardHeader>
-        <CardContent className="grid gap-3">
-          {notes.length === 0 ? (
-            <p className="text-sm text-muted">No follow-up notes yet.</p>
-          ) : (
-            notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-border p-3">
-                <p className="text-sm">{note.body}</p>
-                <p className="mt-2 text-xs text-muted">{formatDate(note.createdAt)}</p>
+        {notes.length === 0 ? (
+          <EmptyState
+            icon={NotebookPen}
+            title="No follow-up notes yet"
+            description="Notes you add appear here as a running clinical record."
+          />
+        ) : (
+          <CardContent className="grid gap-3">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="rounded-lg border border-border bg-surface-2 p-4"
+              >
+                <p className="text-sm text-foreground">{note.body}</p>
+                <p className="mt-2 text-xs text-faint">{formatDate(note.createdAt)}</p>
               </div>
-            ))
-          )}
-        </CardContent>
+            ))}
+          </CardContent>
+        )}
       </Card>
     </div>
   );
