@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Plus, Sparkles } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,6 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Datum, Overline } from "@/components/ui/instrument";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { repo } from "@/server/db/scoped-repo";
@@ -52,69 +54,73 @@ export default async function LesionDetailPage({
   const generateAction = generateEvolutionInsightAction.bind(null, patientId, lesionId);
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);
   const addNoteAction = addManagementNoteAction.bind(null, patientId, lesionId);
+  const site = formatLesionSite(timeline.lesion.bodySide, timeline.lesion.bodyRegion);
+  const insightContent = currentInsight
+    ? (currentInsight.content as Record<string, string>)
+    : null;
 
   return (
-    <div className="grid gap-7">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <nav className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-faint">
-            <Link href={`/app/patients/${patientId}`} className="hover:text-muted">
+    <div className="grid gap-8">
+      <PageHeader
+        eyebrow={
+          <>
+            <Link
+              href={`/app/patients/${patientId}`}
+              className="transition-colors hover:text-foreground"
+            >
               {timeline.patient.firstName} {timeline.patient.lastName}
             </Link>
-            <span>/</span>
-            <span className="text-muted">Lesion</span>
-          </nav>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {formatLesionSite(timeline.lesion.bodySide, timeline.lesion.bodyRegion)}
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted">
-            {timeline.lesion.bodyLocationNote}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button asChild variant="secondary">
-            <Link href={`/app/patients/${patientId}/lesions/${lesionId}/management`}>
-              <ClipboardList /> Management
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/app/patients/${patientId}/lesions/${lesionId}/scans/new`}>
-              <Plus /> Record scan
-            </Link>
-          </Button>
-        </div>
-      </div>
+            <span aria-hidden>/</span>
+            <span>Lesion · {site}</span>
+          </>
+        }
+        title={site}
+        description={timeline.lesion.bodyLocationNote}
+        actions={
+          <>
+            <Button asChild variant="secondary">
+              <Link href={`/app/patients/${patientId}/lesions/${lesionId}/management`}>
+                <ClipboardList strokeWidth={1.75} /> Management
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/app/patients/${patientId}/lesions/${lesionId}/scans/new`}>
+                <Plus strokeWidth={1.75} /> Record scan
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <LesionTimelineClient data={timeline} />
 
         <aside className="grid h-fit gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
-                  <Sparkles className="size-4" />
-                </span>
-                AI insight
-              </CardTitle>
+              <CardTitle>AI insight</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              {currentInsight ? (
+              {insightContent ? (
                 <div className="grid gap-3 text-sm">
                   <p className="font-medium text-foreground">
-                    {(currentInsight.content as Record<string, string>).overview ??
-                      "Evolution narrative"}
+                    {insightContent.overview ?? "Evolution narrative"}
                   </p>
-                  <p className="leading-relaxed text-muted">
-                    {(currentInsight.content as Record<string, string>).narrative ??
-                      JSON.stringify(currentInsight.content)}
+                  <p className="text-[0.8125rem] leading-relaxed text-muted">
+                    {insightContent.narrative ??
+                      JSON.stringify(currentInsight?.content)}
                   </p>
-                  <p className="text-xs text-faint">
-                    Generated {formatDate(currentInsight.createdAt)}
-                  </p>
-                  <p className="rounded-lg bg-surface-2 p-3 text-xs text-faint">
-                    {(currentInsight.content as Record<string, string>).disclaimer}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-3">
+                    <Overline>Generated</Overline>
+                    <Datum className="text-xs text-muted">
+                      {formatDate(currentInsight!.createdAt)}
+                    </Datum>
+                  </div>
+                  {insightContent.disclaimer ? (
+                    <p className="rounded-sm border border-border bg-surface-2 p-3 text-xs text-muted">
+                      {insightContent.disclaimer}
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-sm text-muted">
@@ -124,7 +130,7 @@ export default async function LesionDetailPage({
               {canManage ? (
                 <form action={generateAction}>
                   <Button type="submit" variant="soft" className="w-full">
-                    <Sparkles /> Generate insight
+                    Generate insight
                   </Button>
                 </form>
               ) : null}
@@ -176,12 +182,12 @@ export default async function LesionDetailPage({
                   {notes.map((note) => (
                     <div
                       key={note.id}
-                      className="rounded-lg border border-border bg-surface-2 p-3"
+                      className="rounded-sm border border-border bg-surface-2 p-3"
                     >
                       <p className="text-sm text-foreground">{note.body}</p>
-                      <p className="mt-2 text-xs text-faint">
+                      <Datum className="mt-2 block text-xs text-faint">
                         {formatDate(note.createdAt)}
-                      </p>
+                      </Datum>
                     </div>
                   ))}
                 </div>

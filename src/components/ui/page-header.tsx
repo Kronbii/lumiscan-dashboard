@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { Tick } from "@/components/ui/instrument";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
@@ -17,19 +18,24 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
         className,
       )}
     >
       <div className="min-w-0">
         {eyebrow ? (
-          <div className="mb-1.5 text-xs font-medium text-faint">{eyebrow}</div>
+          <div className="overline mb-2 flex items-center gap-2">
+            <Tick />
+            {eyebrow}
+          </div>
         ) : null}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-bold tracking-[-0.02em] text-foreground">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 max-w-2xl text-sm text-muted">{description}</p>
+          <p className="mt-1.5 max-w-2xl text-[0.8125rem] text-muted">
+            {description}
+          </p>
         ) : null}
       </div>
       {actions ? (

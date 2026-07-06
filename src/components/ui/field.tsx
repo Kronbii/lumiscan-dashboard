@@ -14,15 +14,23 @@ export function Field({
 }) {
   return (
     <label className={cn("grid gap-1.5", className)}>
-      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="text-[0.8125rem] font-semibold text-foreground">
+          {label}
+        </span>
+        {hint ? <span className="overline text-[0.625rem]">{hint}</span> : null}
+      </span>
       {children}
-      {hint ? <span className="text-xs text-faint">{hint}</span> : null}
     </label>
   );
 }
 
 export const inputClass =
-  "h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm text-foreground shadow-xs outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
+  "h-9 w-full rounded-sm border border-border-strong bg-surface px-3 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
 
 export const textareaClass =
-  "w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm text-foreground shadow-xs outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
+  "min-h-24 w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
+
+/* Device-read values arrive in a sunken mono well. */
+export const readonlyClass =
+  "datum h-9 w-full rounded-sm border border-border bg-surface-3 px-3 text-[0.8125rem] text-muted outline-none";

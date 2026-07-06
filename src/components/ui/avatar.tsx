@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils";
 
+/*
+  The avatar is the system's lone circular element — a human mark against
+  the machined geometry. Neutral ink tints only; identity color would
+  compete with the classification indicator colors.
+*/
 const palette = [
-  "bg-teal-100 text-teal-800",
-  "bg-sky-100 text-sky-800",
-  "bg-violet-100 text-violet-800",
-  "bg-amber-100 text-amber-800",
-  "bg-rose-100 text-rose-800",
-  "bg-emerald-100 text-emerald-800",
-  "bg-indigo-100 text-indigo-800",
+  "bg-surface-3 text-muted",
+  "bg-inconclusive-soft text-inconclusive-ink",
+  "bg-primary-soft text-primary-soft-foreground",
+  "bg-sidebar-raised text-ink-on-dark",
 ];
 
 function initials(name: string) {
@@ -24,9 +26,9 @@ function hash(str: string) {
 }
 
 const sizes = {
-  sm: "size-8 text-xs",
-  md: "size-10 text-sm",
-  lg: "size-12 text-base",
+  sm: "size-8 text-[0.6875rem]",
+  md: "size-10 text-xs",
+  lg: "size-12 text-sm",
 };
 
 export function Avatar({
@@ -42,7 +44,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-inset ring-black/5",
+        "datum inline-flex shrink-0 items-center justify-center rounded-full font-medium uppercase tracking-[0.06em] ring-1 ring-inset ring-black/10",
         sizes[size],
         color,
         className,

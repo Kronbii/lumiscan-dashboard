@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { createPatientAction } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
+import { SectionLabel } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default function NewPatientPage() {
   return (
-    <div className="mx-auto grid max-w-3xl gap-7">
+    <div className="mx-auto grid max-w-2xl gap-7">
       <PageHeader
         eyebrow={
           <Link href="/app/patients" className="hover:text-muted">
@@ -21,7 +22,9 @@ export default function NewPatientPage() {
       <form action={createPatientAction} className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Identity</CardTitle>
+            <h2 className="flex items-center">
+              <SectionLabel index="01" title="Identity" />
+            </h2>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <Field label="First name">
@@ -41,7 +44,9 @@ export default function NewPatientPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Contact</CardTitle>
+            <h2 className="flex items-center">
+              <SectionLabel index="02" title="Contact" />
+            </h2>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -61,7 +66,7 @@ export default function NewPatientPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 border-t border-border pt-4">
           <Button asChild variant="ghost">
             <Link href="/app/patients">Cancel</Link>
           </Button>

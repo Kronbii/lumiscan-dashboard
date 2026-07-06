@@ -19,11 +19,13 @@ export type NavItem = {
   exact?: boolean;
 };
 
+/* Instrument-rail nav: idle dim, active = white on raised charcoal with a
+   2px cobalt scanline flush to the left edge. */
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="grid gap-1">
+    <nav className="grid gap-px">
       {items.map((item) => {
         const Icon = icons[item.icon];
         const active = item.exact
@@ -35,24 +37,27 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "group relative flex h-9 items-center gap-3 px-4 text-[0.8125rem] font-medium transition-colors",
               active
-                ? "bg-primary-soft text-primary-soft-foreground"
-                : "text-muted hover:bg-surface-3 hover:text-foreground",
+                ? "bg-sidebar-raised text-white"
+                : "text-ink-on-dark-dim hover:text-ink-on-dark",
             )}
           >
             <span
               className={cn(
-                "absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-opacity",
+                "absolute inset-y-0 left-0 w-0.5 bg-primary transition-opacity",
                 active ? "opacity-100" : "opacity-0",
               )}
               aria-hidden
             />
             <Icon
               className={cn(
-                "size-[1.15rem] shrink-0 transition-colors",
-                active ? "text-primary" : "text-faint group-hover:text-muted",
+                "size-4 shrink-0 transition-colors",
+                active
+                  ? "text-white"
+                  : "text-ink-on-dark-dim group-hover:text-ink-on-dark",
               )}
+              strokeWidth={1.75}
             />
             {item.label}
           </Link>

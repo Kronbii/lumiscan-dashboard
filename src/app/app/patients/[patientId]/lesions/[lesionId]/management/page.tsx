@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
-import { Badge } from "@/components/ui/badge";
+import {
+  Datum,
+  Overline,
+  StatusChip,
+  type StatusTone,
+} from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
 import { managementStatuses } from "@/lib/enums";
 import { formatDate, formatLesionSite } from "@/lib/utils";
@@ -18,12 +23,12 @@ import { managementService } from "@/server/services/management";
 
 export const dynamic = "force-dynamic";
 
-const statusTone = {
-  MONITORING: "teal",
-  BIOPSY_RECOMMENDED: "amber",
-  REFERRED: "amber",
-  RESOLVED: "green",
-} as const;
+const statusTone: Record<(typeof managementStatuses)[number], StatusTone> = {
+  MONITORING: "neutral",
+  BIOPSY_RECOMMENDED: "suspicious",
+  REFERRED: "accent",
+  RESOLVED: "benign",
+};
 
 export default async function ManagementPage({
   params,
@@ -41,7 +46,7 @@ export default async function ManagementPage({
   const addNoteAction = addManagementNoteAction.bind(null, patientId, lesionId);
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-7">
+    <div className="mx-auto grid max-w-4xl gap-8">
       <PageHeader
         eyebrow={
           <Link
@@ -57,10 +62,11 @@ export default async function ManagementPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Follow-up status</CardTitle>
-          <Badge tone={statusTone[status]} dot>
-            {status.replaceAll("_", " ")}
-          </Badge>
+          <CardTitle>01 · Follow-up status</CardTitle>
+          <StatusChip
+            label={status.replaceAll("_", " ")}
+            tone={statusTone[status]}
+          />
         </CardHeader>
         <CardContent className="grid gap-5">
           {canManage ? (
@@ -81,7 +87,10 @@ export default async function ManagementPage({
                   Save status
                 </Button>
               </form>
-              <form action={addNoteAction} className="grid gap-2 border-t border-border pt-5">
+              <form
+                action={addNoteAction}
+                className="grid gap-2 border-t border-border pt-5"
+              >
                 <Field label="Add a follow-up note">
                   <textarea
                     className={textareaClass}
@@ -104,11 +113,11 @@ export default async function ManagementPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>02 · Notes</CardTitle>
           {notes.length > 0 ? (
-            <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-muted">
+            <Datum className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-xs text-muted">
               {notes.length}
-            </span>
+            </Datum>
           ) : null}
         </CardHeader>
         {notes.length === 0 ? (
@@ -118,17 +127,21 @@ export default async function ManagementPage({
             description="Notes you add appear here as a running clinical record."
           />
         ) : (
-          <CardContent className="grid gap-3">
+          <ul className="divide-y divide-border">
             {notes.map((note) => (
-              <div
-                key={note.id}
-                className="rounded-lg border border-border bg-surface-2 p-4"
-              >
-                <p className="text-sm text-foreground">{note.body}</p>
-                <p className="mt-2 text-xs text-faint">{formatDate(note.createdAt)}</p>
-              </div>
+              <li key={note.id} className="px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <Overline className="text-muted">Clinical note</Overline>
+                  <Datum className="text-[0.6875rem] text-faint">
+                    {formatDate(note.createdAt)}
+                  </Datum>
+                </div>
+                <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-foreground">
+                  {note.body}
+                </p>
+              </li>
             ))}
-          </CardContent>
+          </ul>
         )}
       </Card>
     </div>

@@ -1,35 +1,73 @@
 @import "tailwindcss";
 
 /*
-  Lumiscan design tokens — a calm, modern clinical system.
-  Cool neutral canvas, one confident teal primary, clinical status accents.
+  Lumiscan "Instrument Grade" design tokens.
+
+  The UI is the software face of a precision optical instrument: machined
+  panels separated by hairline seams on a warm ivory work surface, a dark
+  instrument-rail sidebar, mono for every measured value, and color rationed —
+  one cobalt action accent, four classification indicator colors, nothing else.
 */
 :root {
-  --background: #f5f7f8;
-  --surface: #ffffff;
-  --surface-2: #f8fafb;
-  --surface-3: #eef2f4;
+  /* Work surfaces */
+  --background: #f2f2ef; /* ivory canvas */
+  --surface: #ffffff; /* panel face */
+  --surface-2: #f7f7f4; /* hover wash */
+  --surface-3: #eaeae6; /* sunken wells, image mats, device-read fields */
 
-  --foreground: #0d1b1a;
-  --muted: #55655f;
-  --faint: #8a9893;
+  /* Ink */
+  --foreground: #17191c;
+  --muted: #4b5058;
+  --faint: #7a8089;
 
-  --border: #e2e8e6;
-  --border-strong: #cfdad6;
+  /* Seams */
+  --border: #dbdcd6;
+  --border-strong: #b7b9b1;
 
-  --primary: #0c8577;
-  --primary-hover: #0a6d61;
+  /* Instrument rail (sidebar) */
+  --sidebar: #16181b;
+  --sidebar-raised: #22252a;
+  --sidebar-border: #2a2d33;
+  --ink-on-dark: #e9eae6;
+  --ink-on-dark-dim: #a9adb3;
+
+  /* Cobalt — the only action color */
+  --primary: #2049b0;
+  --primary-hover: #1a3c93;
   --primary-foreground: #ffffff;
-  --primary-soft: #e2f4f0;
-  --primary-soft-foreground: #0a5f55;
-  --ring: rgba(12, 133, 119, 0.35);
+  --primary-soft: #e9edfa;
+  --primary-soft-border: #c7d3f2;
+  --primary-soft-foreground: #1a3c93;
+  --ring: rgba(32, 73, 176, 0.28);
 
-  --radius: 0.875rem;
+  /* Classification indicator colors (clinically locked semantics) */
+  --benign: #1a7f4b;
+  --benign-ink: #14603a;
+  --benign-soft: #e6f2eb;
+  --benign-border: #bfdccb;
+  --suspicious: #b45309;
+  --suspicious-ink: #8a4206;
+  --suspicious-soft: #fbf0de;
+  --suspicious-border: #ebd2a8;
+  --malignant: #a31212;
+  --malignant-ink: #8c0f0f;
+  --malignant-soft: #fae9e9;
+  --malignant-border: #eec3c3;
+  --inconclusive: #5b6472;
+  --inconclusive-ink: #494f5a;
+  --inconclusive-soft: #edeff1;
+  --inconclusive-border: #d3d7dd;
 
-  --shadow-xs: 0 1px 2px rgba(13, 27, 26, 0.04);
-  --shadow-sm: 0 1px 2px rgba(13, 27, 26, 0.05), 0 1px 3px rgba(13, 27, 26, 0.06);
-  --shadow-md: 0 2px 4px rgba(13, 27, 26, 0.04), 0 6px 16px -4px rgba(13, 27, 26, 0.1);
-  --shadow-lg: 0 12px 32px -8px rgba(13, 27, 26, 0.18);
+  /* Charts */
+  --chart-grid: #e8e9e3;
+  --chart-axis: #c6c8c0;
+
+  /* Machined geometry: 2px controls, 4px panels — nothing rounder */
+  --radius-control: 2px;
+  --radius-panel: 4px;
+
+  /* Elevation exists only for true overlays */
+  --shadow-overlay: 0 2px 8px rgba(23, 25, 28, 0.1);
 }
 
 @theme inline {
@@ -42,75 +80,158 @@
   --color-faint: var(--faint);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-raised: var(--sidebar-raised);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-ink-on-dark: var(--ink-on-dark);
+  --color-ink-on-dark-dim: var(--ink-on-dark-dim);
+
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-border: var(--primary-soft-border);
   --color-primary-soft-foreground: var(--primary-soft-foreground);
 
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 0.25rem);
-  --radius-2xl: calc(var(--radius) + 0.5rem);
+  --color-benign: var(--benign);
+  --color-benign-ink: var(--benign-ink);
+  --color-benign-soft: var(--benign-soft);
+  --color-benign-border: var(--benign-border);
+  --color-suspicious: var(--suspicious);
+  --color-suspicious-ink: var(--suspicious-ink);
+  --color-suspicious-soft: var(--suspicious-soft);
+  --color-suspicious-border: var(--suspicious-border);
+  --color-malignant: var(--malignant);
+  --color-malignant-ink: var(--malignant-ink);
+  --color-malignant-soft: var(--malignant-soft);
+  --color-malignant-border: var(--malignant-border);
+  --color-inconclusive: var(--inconclusive);
+  --color-inconclusive-ink: var(--inconclusive-ink);
+  --color-inconclusive-soft: var(--inconclusive-soft);
+  --color-inconclusive-border: var(--inconclusive-border);
 
-  --shadow-xs: var(--shadow-xs);
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
+  /* Lock the radius scale to the machined pair. Legacy rounded-lg/xl/2xl
+     usages all collapse to the 4px panel radius. */
+  --radius-xs: var(--radius-control);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-panel);
+  --radius-lg: var(--radius-panel);
+  --radius-xl: var(--radius-panel);
+  --radius-2xl: var(--radius-panel);
+  --radius-3xl: var(--radius-panel);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Cards carry no shadow; only true overlays are elevated. */
+  --shadow-2xs: 0 0 rgba(0, 0, 0, 0);
+  --shadow-xs: 0 0 rgba(0, 0, 0, 0);
+  --shadow-sm: 0 0 rgba(0, 0, 0, 0);
+  --shadow-md: var(--shadow-overlay);
+  --shadow-lg: var(--shadow-overlay);
+
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 }
 
-* {
-  border-color: var(--border);
+/* Element defaults live in the base layer so utility classes always win. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-archivo), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--primary-soft-foreground);
+  }
 }
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+/* ---- Instrument voice utilities ---------------------------------------- */
+
+/* The universal section/column/label style: calibrated mono overline.
+   text-decoration-line unsets Tailwind's same-named `overline` utility. */
+.overline {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration-line: none;
+  color: var(--faint);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
-  font-feature-settings: "cv11", "ss01";
-  letter-spacing: -0.006em;
+/* Any measured value: mono, tabular. (No letter-spacing here so tracking-*
+   utilities compose with it.) */
+.datum {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
-h1,
-h2,
-h3,
-h4 {
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
-a {
-  text-decoration: none;
-}
-
-::selection {
-  background: var(--primary-soft);
-  color: var(--primary-soft-foreground);
-}
-
-/* Tabular numerals for metrics and counts */
 .nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Subtle, modern scrollbars */
+/* The dermatoscope ruler: 1px ticks every 8px, taller every 40px. */
+.ruler {
+  height: 8px;
+  background-image: repeating-linear-gradient(
+      to right,
+      var(--border-strong) 0 1px,
+      transparent 1px 8px
+    ),
+    repeating-linear-gradient(
+      to right,
+      var(--border-strong) 0 1px,
+      transparent 1px 40px
+    );
+  background-size:
+    100% 4px,
+    100% 8px;
+  background-position:
+    0 100%,
+    0 100%;
+  background-repeat: no-repeat;
+}
+
+.ruler-dark {
+  background-image: repeating-linear-gradient(
+      to right,
+      var(--sidebar-border) 0 1px,
+      transparent 1px 8px
+    ),
+    repeating-linear-gradient(
+      to right,
+      #3a3e45 0 1px,
+      transparent 1px 40px
+    );
+}
+
+/* Squared, quiet scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
@@ -121,7 +242,6 @@ a {
 }
 *::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
@@ -132,21 +252,20 @@ a {
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring);
-  border-radius: 0.4rem;
+  box-shadow:
+    0 0 0 1px var(--surface),
+    0 0 0 3px var(--ring);
 }
 
-@keyframes fade-in-up {
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .animate-in {
-  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-in 0.25s ease-out both;
 }

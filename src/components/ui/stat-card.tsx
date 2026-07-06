@@ -1,11 +1,17 @@
 import type { LucideIcon } from "lucide-react";
+import { Overline } from "@/components/ui/instrument";
 import { cn } from "@/lib/utils";
 
+/*
+  One cell of the instrument's stat fascia. Designed to sit inside a
+  <Fascia> strip (grid gap-px bg-border) so a row of stats reads as one
+  continuous milled panel, not floating cards.
+*/
 const tones = {
-  teal: "bg-primary-soft text-primary",
-  amber: "bg-amber-50 text-amber-600",
-  red: "bg-red-50 text-red-600",
-  slate: "bg-surface-3 text-muted",
+  teal: "text-primary",
+  amber: "text-suspicious",
+  red: "text-malignant",
+  slate: "text-faint",
 };
 
 export function StatCard({
@@ -13,38 +19,28 @@ export function StatCard({
   value,
   hint,
   icon: Icon,
-  tone = "teal",
+  tone = "slate",
   className,
 }: {
   label: string;
   value: React.ReactNode;
   hint?: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   tone?: keyof typeof tones;
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "group relative overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-sm transition-all duration-150 hover:border-border-strong hover:shadow-md",
-        className,
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted">{label}</p>
-        <span
-          className={cn(
-            "inline-flex size-9 items-center justify-center rounded-lg",
-            tones[tone],
-          )}
-        >
-          <Icon className="size-[1.15rem]" />
-        </span>
+    <div className={cn("bg-surface p-4", className)}>
+      <div className="flex items-center justify-between gap-3">
+        <Overline>{label}</Overline>
+        {Icon ? (
+          <Icon className={cn("size-4", tones[tone])} strokeWidth={1.75} />
+        ) : null}
       </div>
-      <p className="nums mt-3 text-3xl font-semibold tracking-tight text-foreground">
+      <p className="datum mt-2 text-[1.75rem] font-medium leading-none text-foreground">
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-faint">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs text-faint">{hint}</p> : null}
     </div>
   );
 }
