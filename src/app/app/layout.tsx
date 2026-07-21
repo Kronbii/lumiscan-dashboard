@@ -4,6 +4,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Led, Overline, RulerStrip } from "@/components/ui/instrument";
 import { getOrgContext } from "@/server/auth/org-context";
 
+// The whole /app subtree depends on the DB-backed org identity resolved in this
+// layout, so nothing here may be statically prerendered — otherwise a build-time
+// DB blip bakes the "workspace could not be initialized" card into static HTML.
+export const dynamic = "force-dynamic";
+
 const primaryNav: NavItem[] = [
   { href: "/app", label: "Dashboard", icon: "dashboard", exact: true },
   { href: "/app/patients", label: "Patients", icon: "patients" },

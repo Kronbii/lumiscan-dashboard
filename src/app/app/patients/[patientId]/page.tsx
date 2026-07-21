@@ -18,6 +18,7 @@ import { cn, formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { patientService } from "@/server/services/patient";
 import { lesionService } from "@/server/services/lesion";
+import { notFoundIfMissing } from "@/lib/rsc";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function PatientDetailPage({
   const [patient, lesions] = await Promise.all([
     patientService.getById(ctx, patientId),
     lesionService.listByPatientUnchecked(ctx, patientId),
-  ]);
+  ]).catch(notFoundIfMissing);
   const name = `${patient.firstName} ${patient.lastName}`;
 
   const details = [

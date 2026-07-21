@@ -12,12 +12,13 @@ import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
 import {
   addManagementNoteAction,
-  generateEvolutionInsightAction,
   setManagementStatusAction,
 } from "@/app/app/actions";
+import { GenerateInsightButton } from "@/app/app/patients/[patientId]/lesions/[lesionId]/generate-insight-button";
 import { LesionTimelineClient } from "@/app/app/patients/[patientId]/lesions/[lesionId]/timeline-client";
 import { managementStatuses } from "@/lib/enums";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
+import { notFoundIfMissing } from "@/lib/rsc";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +45,11 @@ export default async function LesionDetailPage({
       kind: "EVOLUTION_NARRATIVE",
     }),
     managementService.getPlanWithNotes(ctx, lesionId),
-  ]);
+  ]).catch(notFoundIfMissing);
   const { plan, notes } = management;
   const timeline = JSON.parse(JSON.stringify(timelineRaw)) as typeof timelineRaw;
   const canManage = ctx.role !== "NURSE";
   const status = plan?.status ?? "MONITORING";
-  const generateAction = generateEvolutionInsightAction.bind(null, patientId, lesionId);
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);
   const addNoteAction = addManagementNoteAction.bind(null, patientId, lesionId);
   const site = formatLesionSite(timeline.lesion.bodySide, timeline.lesion.bodyRegion);
@@ -126,11 +126,7 @@ export default async function LesionDetailPage({
                 </p>
               )}
               {canManage ? (
-                <form action={generateAction}>
-                  <Button type="submit" variant="soft" className="w-full">
-                    Generate insight
-                  </Button>
-                </form>
+                <GenerateInsightButton patientId={patientId} lesionId={lesionId} />
               ) : null}
             </CardContent>
           </Card>

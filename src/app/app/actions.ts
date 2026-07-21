@@ -68,17 +68,26 @@ export async function addManagementNoteAction(
   revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
 }
 
+export type GenerateInsightState = { ok: boolean; error?: string };
+
 export async function generateEvolutionInsightAction(
   patientId: string,
   lesionId: string,
-) {
+): Promise<GenerateInsightState> {
   const ctx = await getOrgContext();
-  await generateInsight(ctx, {
-    subjectType: "LESION",
-    subjectId: lesionId,
-    kind: "EVOLUTION_NARRATIVE",
-  });
+  try {
+    await generateInsight(ctx, {
+      subjectType: "LESION",
+      subjectId: lesionId,
+      kind: "EVOLUTION_NARRATIVE",
+    });
+  } catch {
+    // generateInsight already records a FAILED insight + audit; surface a
+    // friendly message instead of crashing the page with a 500.
+    return { ok: false, error: "Insight generation failed. Please try again." };
+  }
   revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  return { ok: true };
 }
 
 export async function createDeviceAction(formData: FormData) {

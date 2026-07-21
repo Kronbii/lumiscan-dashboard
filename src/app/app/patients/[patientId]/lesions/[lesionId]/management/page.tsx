@@ -16,6 +16,7 @@ import { managementStatuses } from "@/lib/enums";
 import { formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { managementService } from "@/server/services/management";
+import { notFoundIfMissing } from "@/lib/rsc";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,9 @@ export default async function ManagementPage({
 }) {
   const { patientId, lesionId } = await params;
   const ctx = await getOrgContext();
-  const { lesion, plan, notes } = await managementService.getPlanWithNotes(
-    ctx,
-    lesionId,
-  );
+  const { lesion, plan, notes } = await managementService
+    .getPlanWithNotes(ctx, lesionId)
+    .catch(notFoundIfMissing);
   const canManage = ctx.role !== "NURSE";
   const status = plan?.status ?? "MONITORING";
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);

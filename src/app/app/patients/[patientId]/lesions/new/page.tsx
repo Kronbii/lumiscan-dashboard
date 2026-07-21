@@ -8,6 +8,7 @@ import { bodyRegions, bodySides } from "@/lib/enums";
 import { humanize } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { patientService } from "@/server/services/patient";
+import { notFoundIfMissing } from "@/lib/rsc";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function NewLesionPage({
 }) {
   const { patientId } = await params;
   const ctx = await getOrgContext();
-  const patient = await patientService.getById(ctx, patientId);
+  const patient = await patientService.getById(ctx, patientId).catch(notFoundIfMissing);
   const action = createLesionAction.bind(null, patientId);
 
   return (

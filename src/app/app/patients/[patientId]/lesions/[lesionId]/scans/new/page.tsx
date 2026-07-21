@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { lesionService } from "@/server/services/lesion";
+import { notFoundIfMissing } from "@/lib/rsc";
 import { ScanForm } from "./scan-form";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function NewScanPage({
 }) {
   const { patientId, lesionId } = await params;
   const ctx = await getOrgContext();
-  const lesion = await lesionService.getById(ctx, lesionId);
+  const lesion = await lesionService.getById(ctx, lesionId).catch(notFoundIfMissing);
   const nowLocal = new Date().toISOString().slice(0, 16);
   const site = formatLesionSite(lesion.bodySide, lesion.bodyRegion);
   const lesionHref = `/app/patients/${patientId}/lesions/${lesionId}`;

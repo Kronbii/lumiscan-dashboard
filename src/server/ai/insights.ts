@@ -83,9 +83,12 @@ function parseClaudeJson(message: ClaudeMessage) {
 
 async function callClaude(kind: InsightKind, payload: unknown) {
   if (
-    env.ANTHROPIC_API_KEY.includes("replace_me") ||
+    env.ANTHROPIC_API_KEY.includes("replace") ||
     env.ANTHROPIC_API_KEY.endsWith("_ci") ||
-    env.ANTHROPIC_API_KEY === "sk-ant-ci"
+    env.ANTHROPIC_API_KEY === "sk-ant-ci" ||
+    // Any obviously-non-real key (real Anthropic keys are ~100+ chars). Avoids a
+    // guaranteed 401 in local/demo where a placeholder key is configured.
+    env.ANTHROPIC_API_KEY.length < 40
   ) {
     return fakeContent(kind, payload);
   }
