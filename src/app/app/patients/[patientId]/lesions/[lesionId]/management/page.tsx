@@ -12,6 +12,7 @@ import {
   type StatusTone,
 } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
+import { ToastForm } from "@/components/toast-form";
 import { managementStatuses } from "@/lib/enums";
 import { formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
@@ -65,7 +66,11 @@ export default async function ManagementPage({
         <CardContent className="grid gap-5">
           {canManage ? (
             <>
-              <form action={setStatusAction} className="flex flex-wrap gap-2">
+              <ToastForm
+                action={setStatusAction}
+                success="Status updated"
+                className="flex flex-wrap gap-2"
+              >
                 <select
                   className={`${inputClass} sm:max-w-xs`}
                   name="status"
@@ -80,9 +85,10 @@ export default async function ManagementPage({
                 <Button type="submit" variant="secondary">
                   Save status
                 </Button>
-              </form>
-              <form
+              </ToastForm>
+              <ToastForm
                 action={addNoteAction}
+                success="Follow-up note added"
                 className="grid gap-2 border-t border-border pt-5"
               >
                 <Field label="Add a follow-up note">
@@ -97,7 +103,7 @@ export default async function ManagementPage({
                 <Button type="submit" className="justify-self-start">
                   Add note
                 </Button>
-              </form>
+              </ToastForm>
             </>
           ) : (
             <p className="text-sm text-muted">Read-only for the Nurse role.</p>

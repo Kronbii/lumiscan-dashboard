@@ -269,3 +269,12 @@
 .animate-in {
   animation: fade-in 0.25s ease-out both;
 }
+
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

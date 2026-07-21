@@ -1,5 +1,6 @@
 import { MobileNav } from "@/components/mobile-nav";
 import { PermissionCard } from "@/components/permission-card";
+import { ToastProvider } from "@/components/toast";
 import { type Persona } from "@/components/persona-switcher";
 import { SidebarContent } from "@/components/sidebar-content";
 import { Led } from "@/components/ui/instrument";
@@ -48,7 +49,8 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <ToastProvider>
+      <div className="min-h-screen">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-sidebar lg:flex">
         <SidebarContent personas={personas} currentMembershipId={membershipId} />
       </aside>
@@ -80,6 +82,7 @@ export default async function AppLayout({
           <div className="animate-in">{children}</div>
         </main>
       </div>
-    </div>
+      </div>
+    </ToastProvider>
   );
 }

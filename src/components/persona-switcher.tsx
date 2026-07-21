@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { setActingPersonaAction } from "@/app/app/actions";
 import { Avatar } from "@/components/ui/avatar";
+import { useToast } from "@/components/toast";
 import { cn } from "@/lib/utils";
 
 export type Persona = { membershipId: string; name: string; role: string };
@@ -18,6 +19,7 @@ export function PersonaSwitcher({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
+  const { show } = useToast();
   const current =
     personas.find((p) => p.membershipId === currentMembershipId) ?? personas[0];
 
@@ -42,9 +44,11 @@ export function PersonaSwitcher({
       setOpen(false);
       return;
     }
+    const next = personas.find((p) => p.membershipId === membershipId);
     startTransition(async () => {
       await setActingPersonaAction(membershipId);
       setOpen(false);
+      if (next) show({ tone: "info", title: `Acting as ${next.name}`, detail: next.role });
     });
   }
 

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, inputClass } from "@/components/ui/field";
 import { Datum, Overline, StatusChip } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
+import { ToastForm } from "@/components/toast-form";
 import { formatDate } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { deviceService } from "@/server/services/device";
@@ -98,12 +99,12 @@ async function DeviceRegister() {
                   </td>
                   <td className="px-4 py-1.5 text-right">
                     {device.status === "ACTIVE" ? (
-                      <form action={revokeDeviceAction}>
+                      <ToastForm action={revokeDeviceAction} success="Device revoked">
                         <input type="hidden" name="id" value={device.id} />
                         <Button type="submit" variant="danger" size="sm">
                           Revoke
                         </Button>
-                      </form>
+                      </ToastForm>
                     ) : null}
                   </td>
                 </tr>

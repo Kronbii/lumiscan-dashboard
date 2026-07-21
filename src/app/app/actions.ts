@@ -10,6 +10,8 @@ import { managementService } from "@/server/services/management";
 import { deviceService } from "@/server/services/device";
 import { generateInsight } from "@/server/ai/insights";
 
+export type ActionState = { ok: boolean; error?: string };
+
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -121,26 +123,35 @@ export async function setManagementStatusAction(
   patientId: string,
   lesionId: string,
   formData: FormData,
-) {
+): Promise<ActionState> {
   const ctx = await getOrgContext();
-  await managementService.setStatus(ctx, {
-    lesionId,
-    status: text(formData, "status") as never,
-  });
+  try {
+    await managementService.setStatus(ctx, {
+      lesionId,
+      status: text(formData, "status") as never,
+    });
+  } catch {
+    return { ok: false, error: "Couldn't update the status." };
+  }
   revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  return { ok: true };
 }
 
 export async function addManagementNoteAction(
   patientId: string,
   lesionId: string,
   formData: FormData,
-) {
+): Promise<ActionState> {
   const ctx = await getOrgContext();
-  await managementService.addNote(ctx, {
-    lesionId,
-    body: text(formData, "body"),
-  });
+  const body = text(formData, "body");
+  if (!body) return { ok: false, error: "Write a note before adding it." };
+  try {
+    await managementService.addNote(ctx, { lesionId, body });
+  } catch {
+    return { ok: false, error: "Couldn't add the note." };
+  }
   revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  return { ok: true };
 }
 
 export type GenerateInsightState = { ok: boolean; error?: string };
@@ -175,8 +186,13 @@ export async function createDeviceAction(formData: FormData) {
   redirect(`/app/settings/devices?newKey=${encodeURIComponent(result.rawKey)}`);
 }
 
-export async function revokeDeviceAction(formData: FormData) {
+export async function revokeDeviceAction(formData: FormData): Promise<ActionState> {
   const ctx = await getOrgContext();
-  await deviceService.revoke(ctx, text(formData, "id"));
+  try {
+    await deviceService.revoke(ctx, text(formData, "id"));
+  } catch {
+    return { ok: false, error: "Couldn't revoke the device." };
+  }
   revalidatePath("/app/settings/devices");
+  return { ok: true };
 }

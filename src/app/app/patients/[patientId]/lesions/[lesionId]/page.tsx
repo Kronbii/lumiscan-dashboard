@@ -15,6 +15,7 @@ import {
   setManagementStatusAction,
 } from "@/app/app/actions";
 import { BodyMapField } from "@/components/body-map-field";
+import { ToastForm } from "@/components/toast-form";
 import { GenerateInsightButton } from "@/app/app/patients/[patientId]/lesions/[lesionId]/generate-insight-button";
 import { LesionTimelineClient } from "@/app/app/patients/[patientId]/lesions/[lesionId]/timeline-client";
 import { managementStatuses } from "@/lib/enums";
@@ -162,7 +163,11 @@ export default async function LesionDetailPage({
             <CardContent className="grid gap-4">
               {canManage ? (
                 <>
-                  <form action={setStatusAction} className="flex gap-2">
+                  <ToastForm
+                    action={setStatusAction}
+                    success="Status updated"
+                    className="flex gap-2"
+                  >
                     <select className={inputClass} name="status" defaultValue={status}>
                       {managementStatuses.map((s) => (
                         <option key={s} value={s}>
@@ -173,8 +178,12 @@ export default async function LesionDetailPage({
                     <Button type="submit" variant="secondary">
                       Save
                     </Button>
-                  </form>
-                  <form action={addNoteAction} className="grid gap-2">
+                  </ToastForm>
+                  <ToastForm
+                    action={addNoteAction}
+                    success="Follow-up note added"
+                    className="grid gap-2"
+                  >
                     <Field label="Follow-up note">
                       <textarea
                         className={textareaClass}
@@ -191,7 +200,7 @@ export default async function LesionDetailPage({
                     >
                       Add note
                     </Button>
-                  </form>
+                  </ToastForm>
                 </>
               ) : (
                 <p className="text-sm text-muted">Read-only for the Nurse role.</p>
