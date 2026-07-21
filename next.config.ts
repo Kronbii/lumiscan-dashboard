@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // sharp is loaded at runtime by the scan-image fallback route; keep it as a
+  // native external instead of bundling it.
+  serverExternalPackages: ["sharp"],
   images: {
     // Scan images are proxied same-origin (/api/scan-images) and re-encoded to
     // WebP. Keys are content-addressed and immutable, so cache the optimized
