@@ -1,7 +1,8 @@
+import { MobileNav } from "@/components/mobile-nav";
 import { PermissionCard } from "@/components/permission-card";
-import { PersonaSwitcher, type Persona } from "@/components/persona-switcher";
-import { SidebarNav, type NavItem } from "@/components/sidebar-nav";
-import { Led, Overline, RulerStrip } from "@/components/ui/instrument";
+import { type Persona } from "@/components/persona-switcher";
+import { SidebarContent } from "@/components/sidebar-content";
+import { Led } from "@/components/ui/instrument";
 import type { UserRole } from "@/lib/enums";
 import { getOrgContext } from "@/server/auth/org-context";
 import { listOrgMembers } from "@/server/db/system-repo";
@@ -12,29 +13,6 @@ const roleRank: Record<UserRole, number> = { OWNER: 0, ADMIN: 1, DOCTOR: 2, NURS
 // layout, so nothing here may be statically prerendered — otherwise a build-time
 // DB blip bakes the "workspace could not be initialized" card into static HTML.
 export const dynamic = "force-dynamic";
-
-const primaryNav: NavItem[] = [
-  { href: "/app", label: "Dashboard", icon: "dashboard", exact: true },
-  { href: "/app/patients", label: "Patients", icon: "patients" },
-];
-
-const systemNav: NavItem[] = [
-  { href: "/app/settings/devices", label: "Devices", icon: "devices" },
-  { href: "/app/settings/org", label: "Settings", icon: "settings" },
-];
-
-function Brandmark() {
-  return (
-    <span className="inline-flex size-8 items-center justify-center rounded-sm border border-sidebar-border bg-sidebar-raised text-ink-on-dark">
-      <svg viewBox="0 0 24 24" className="size-4.5" fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.4" opacity="0.5" />
-        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
-        <circle cx="12" cy="12" r="1.2" fill="currentColor" />
-        <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      </svg>
-    </span>
-  );
-}
 
 export default async function AppLayout({
   children,
@@ -71,49 +49,16 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col bg-sidebar lg:flex">
-        <div className="px-4 pb-3 pt-4">
-          <div className="flex items-center gap-3">
-            <Brandmark />
-            <div className="leading-tight">
-              <p className="text-sm font-semibold tracking-[-0.01em] text-ink-on-dark">
-                Lumiscan
-              </p>
-              <p className="overline text-[0.625rem] text-ink-on-dark-dim">
-                Dermatoscopic unit
-              </p>
-            </div>
-          </div>
-          <RulerStrip dark className="mt-3" />
-        </div>
-
-        <div className="flex-1 overflow-y-auto py-2">
-          <Overline className="block px-4 pb-1.5 pt-2 text-ink-on-dark-dim/70">
-            Workspace
-          </Overline>
-          <SidebarNav items={primaryNav} />
-          <Overline className="block px-4 pb-1.5 pt-6 text-ink-on-dark-dim/70">
-            System
-          </Overline>
-          <SidebarNav items={systemNav} />
-        </div>
-
-        <div className="border-t border-sidebar-border">
-          <div className="flex items-center gap-2 px-4 py-2.5">
-            <Led tone="benign" />
-            <span className="datum text-[0.625rem] uppercase tracking-[0.08em] text-ink-on-dark-dim">
-              Scanner · Online
-            </span>
-          </div>
-          <div className="border-t border-sidebar-border">
-            <PersonaSwitcher personas={personas} currentMembershipId={membershipId} />
-          </div>
-        </div>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-sidebar lg:flex">
+        <SidebarContent personas={personas} currentMembershipId={membershipId} />
       </aside>
 
       <div className="lg:pl-60">
         <header className="sticky top-0 z-20 flex h-12 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
+            <MobileNav>
+              <SidebarContent personas={personas} currentMembershipId={membershipId} />
+            </MobileNav>
             <span className="datum truncate text-xs font-medium uppercase tracking-[0.08em] text-foreground">
               Prototype Clinic
             </span>
