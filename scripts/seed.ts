@@ -79,6 +79,7 @@ async function makeContext(): Promise<OrgContext> {
     role: "OWNER",
     membershipId: membership.id,
     actorType: "USER",
+    displayName: user.displayName,
   };
 }
 

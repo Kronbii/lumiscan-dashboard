@@ -45,6 +45,29 @@ export async function findMirroredContext(
   return row ?? null;
 }
 
+export async function findMembershipContext(membershipId: string) {
+  const [row] = await db
+    .select({
+      organization: organizations,
+      user: users,
+      membership: memberships,
+    })
+    .from(memberships)
+    .innerJoin(organizations, eq(organizations.id, memberships.orgId))
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(and(eq(memberships.id, membershipId), eq(memberships.status, "ACTIVE")))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listOrgMembers(orgId: string) {
+  return db
+    .select({ user: users, membership: memberships })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(and(eq(memberships.orgId, orgId), eq(memberships.status, "ACTIVE")));
+}
+
 export async function findOrganizationByClerkId(clerkOrgId: string) {
   const [organization] = await db
     .select()

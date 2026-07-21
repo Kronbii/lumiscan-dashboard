@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getOrgContext } from "@/server/auth/org-context";
+import { ACTOR_COOKIE, getOrgContext } from "@/server/auth/org-context";
 import { patientService } from "@/server/services/patient";
 import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
@@ -11,6 +12,18 @@ import { generateInsight } from "@/server/ai/insights";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+// Switch the simulated persona (no real auth). Writes the actor cookie and
+// re-renders the whole shell so every screen reflects the chosen identity/role.
+export async function setActingPersonaAction(membershipId: string) {
+  const store = await cookies();
+  store.set(ACTOR_COOKIE, membershipId, {
+    path: "/",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
 }
 
 export async function createPatientAction(formData: FormData) {
