@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
+  CalendarClock,
   ChevronRight,
+  ClipboardCheck,
   Plus,
   ScanLine,
   ShieldAlert,
@@ -51,7 +53,7 @@ export default async function DashboardPage() {
 
       <section className="grid gap-3">
         <SectionLabel index="01" title="Census" />
-        <Fascia className="sm:grid-cols-3">
+        <Fascia className="sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Patients"
             value={overview.counts.patients}
@@ -67,6 +69,13 @@ export default async function DashboardPage() {
             tone={overview.counts.flaggedLesions > 0 ? "amber" : "slate"}
           />
           <StatCard
+            label="Review overdue"
+            value={overview.counts.reviewOverdue}
+            hint="Past their follow-up date"
+            icon={CalendarClock}
+            tone={overview.counts.reviewOverdue > 0 ? "amber" : "slate"}
+          />
+          <StatCard
             label="Recent flagged scans"
             value={overview.counts.recentScans}
             hint="Across monitored lesions"
@@ -76,9 +85,84 @@ export default async function DashboardPage() {
         </Fascia>
       </section>
 
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle>02 · Review due</CardTitle>
+          </CardHeader>
+          {overview.reviewDue.length === 0 ? (
+            <EmptyState
+              icon={CalendarClock}
+              title="Nothing due"
+              description="Lesions past or nearing their follow-up date will surface here."
+            />
+          ) : (
+            <ul>
+              {overview.reviewDue.map((row) => {
+                const overdue = row.state === "OVERDUE";
+                return (
+                  <li key={row.lesion.id} className="border-b border-border last:border-b-0">
+                    <Link
+                      href={`/app/patients/${row.lesion.patientId}/lesions/${row.lesion.id}/management`}
+                      className={`flex h-10 items-center gap-3 px-4 transition-colors hover:bg-surface-2 ${
+                        overdue ? "border-l-2 border-l-malignant" : "border-l-2 border-l-suspicious"
+                      }`}
+                    >
+                      <Led tone={overdue ? "malignant" : "suspicious"} />
+                      <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">
+                        {formatLesionSite(row.lesion.bodySide, row.lesion.bodyRegion)}
+                      </span>
+                      <Datum
+                        className={`text-[0.6875rem] uppercase tracking-[0.06em] ${
+                          overdue ? "text-malignant" : "text-suspicious"
+                        }`}
+                      >
+                        {overdue ? "Overdue" : "Due soon"} · {formatDate(row.nextReviewAt)}
+                      </Datum>
+                      <ChevronRight className="size-4 shrink-0 text-faint" strokeWidth={1.75} />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle>03 · Awaiting action</CardTitle>
+          </CardHeader>
+          {overview.awaitingAction.length === 0 ? (
+            <EmptyState
+              icon={ClipboardCheck}
+              title="Nothing awaiting"
+              description="Lesions recommended for biopsy or referral will surface here."
+            />
+          ) : (
+            <ul>
+              {overview.awaitingAction.map((row) => (
+                <li key={row.lesion.id} className="border-b border-border last:border-b-0">
+                  <Link
+                    href={`/app/patients/${row.lesion.patientId}/lesions/${row.lesion.id}/management`}
+                    className="flex h-10 items-center gap-3 border-l-2 border-l-suspicious px-4 transition-colors hover:bg-surface-2"
+                  >
+                    <Led tone="accent" />
+                    <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">
+                      {formatLesionSite(row.lesion.bodySide, row.lesion.bodyRegion)}
+                    </span>
+                    <StatusChip label={row.status.replaceAll("_", " ")} tone="suspicious" />
+                    <ChevronRight className="size-4 shrink-0 text-faint" strokeWidth={1.75} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>02 · Recent flagged scans</CardTitle>
+          <CardTitle>04 · Recent flagged scans</CardTitle>
           <Button asChild variant="ghost" size="sm">
             <Link href="/app/patients">
               View patients <ChevronRight strokeWidth={1.75} />

@@ -346,6 +346,8 @@ export const managementPlans = pgTable(
       .notNull()
       .references(() => lesions.id),
     status: managementStatusEnum("status").notNull().default("MONITORING"),
+    nextReviewAt: timestamp("next_review_at", { withTimezone: true }),
+    recallIntervalDays: integer("recall_interval_days"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: deletedAt(),
@@ -354,6 +356,7 @@ export const managementPlans = pgTable(
     uniqueIndex("uq_management_plan_lesion")
       .on(table.orgId, table.lesionId)
       .where(sql`${table.deletedAt} is null`),
+    index("ix_management_plan_review").on(table.orgId, table.nextReviewAt),
   ],
 );
 

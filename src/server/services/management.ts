@@ -32,6 +32,24 @@ export const managementService = {
     return plan;
   },
 
+  async setRecall(
+    ctx: OrgContext,
+    input: { lesionId: string; nextReviewAt: Date | null; recallIntervalDays: number | null },
+  ) {
+    requireRole(ctx, ["OWNER", "ADMIN", "DOCTOR"]);
+    const plan = await repo(ctx).management.setRecall(input.lesionId, {
+      nextReviewAt: input.nextReviewAt,
+      recallIntervalDays: input.recallIntervalDays,
+    });
+    await audit(ctx, {
+      action: "management.recall",
+      resourceType: "management_plan",
+      resourceId: plan.id,
+      metadata: { nextReviewAt: input.nextReviewAt?.toISOString() ?? null },
+    });
+    return plan;
+  },
+
   async addNote(ctx: OrgContext, input: AddManagementNoteInput) {
     requireRole(ctx, ["OWNER", "ADMIN", "DOCTOR"]);
     const note = await repo(ctx).management.addNote(input.lesionId, input.body);

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { uuidv7 } from "@/lib/id";
 import type { ClassificationLabel, ManagementStatus } from "@/lib/enums";
 import type { CreateFinalizedScanInput } from "@/lib/schemas/scan";
@@ -536,6 +536,66 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
           .returning();
         if (!updated) throw notFound();
         return updated;
+      },
+
+      async setRecall(
+        lesionId: string,
+        input: { nextReviewAt: Date | null; recallIntervalDays: number | null },
+      ) {
+        const plan = await createScopedRepo(ctx, client).management.ensurePlan(lesionId);
+        const [updated] = await client
+          .update(managementPlans)
+          .set({
+            nextReviewAt: input.nextReviewAt,
+            recallIntervalDays: input.recallIntervalDays,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(managementPlans.orgId, ctx.orgId),
+              eq(managementPlans.id, plan.id),
+              isNull(managementPlans.deletedAt),
+            ),
+          )
+          .returning();
+        if (!updated) throw notFound();
+        return updated;
+      },
+
+      // Monitored lesions with a review date, soonest first — powers the
+      // dashboard "review due" worklist. Joins the lesion for display.
+      async reviewQueue() {
+        return client
+          .select({ plan: managementPlans, lesion: lesions })
+          .from(managementPlans)
+          .innerJoin(lesions, eq(lesions.id, managementPlans.lesionId))
+          .where(
+            and(
+              eq(managementPlans.orgId, ctx.orgId),
+              isNull(managementPlans.deletedAt),
+              isNull(lesions.deletedAt),
+              isNotNull(managementPlans.nextReviewAt),
+            ),
+          )
+          .orderBy(asc(managementPlans.nextReviewAt));
+      },
+
+      // Plans needing a clinical decision (biopsy/referral) — the "awaiting
+      // action" worklist. No recall data required.
+      async awaitingAction() {
+        return client
+          .select({ plan: managementPlans, lesion: lesions })
+          .from(managementPlans)
+          .innerJoin(lesions, eq(lesions.id, managementPlans.lesionId))
+          .where(
+            and(
+              eq(managementPlans.orgId, ctx.orgId),
+              isNull(managementPlans.deletedAt),
+              isNull(lesions.deletedAt),
+              inArray(managementPlans.status, ["BIOPSY_RECOMMENDED", "REFERRED"]),
+            ),
+          )
+          .orderBy(desc(managementPlans.updatedAt));
       },
 
       async addNote(lesionId: string, body: string) {

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { NotebookPen } from "lucide-react";
-import { addManagementNoteAction, setManagementStatusAction } from "@/app/app/actions";
+import {
+  addManagementNoteAction,
+  setManagementStatusAction,
+  setRecallAction,
+} from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -42,6 +46,23 @@ export default async function ManagementPage({
   const status = plan?.status ?? "MONITORING";
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);
   const addNoteAction = addManagementNoteAction.bind(null, patientId, lesionId);
+  const setRecall = setRecallAction.bind(null, patientId, lesionId);
+
+  const review = plan?.nextReviewAt
+    ? (() => {
+        const days = Math.round(
+          (new Date(plan.nextReviewAt).getTime() - Date.now()) / 86_400_000,
+        );
+        return {
+          date: plan.nextReviewAt,
+          label: days < 0 ? "OVERDUE" : days <= 14 ? "DUE SOON" : "SCHEDULED",
+          tone: (days < 0 ? "malignant" : days <= 14 ? "suspicious" : "neutral") as StatusTone,
+        };
+      })()
+    : null;
+  const currentInterval = plan?.recallIntervalDays
+    ? String(Math.round(plan.recallIntervalDays / 7))
+    : "";
 
   return (
     <div className="mx-auto grid max-w-4xl gap-8">
@@ -113,7 +134,45 @@ export default async function ManagementPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>02 · Notes</CardTitle>
+          <CardTitle>02 · Recall</CardTitle>
+          {review ? <StatusChip label={review.label} tone={review.tone} /> : null}
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <p className="text-[0.8125rem] text-muted">
+            {review
+              ? `Next review ${formatDate(review.date)}${currentInterval ? ` · every ${currentInterval} weeks` : ""}.`
+              : "No follow-up scheduled for this lesion."}
+          </p>
+          {canManage ? (
+            <ToastForm
+              action={setRecall}
+              success="Recall updated"
+              className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+            >
+              <Field label="Review interval">
+                <select className={inputClass} name="intervalWeeks" defaultValue={currentInterval}>
+                  <option value="">No recall</option>
+                  <option value="4">Every 4 weeks</option>
+                  <option value="8">Every 8 weeks</option>
+                  <option value="12">Every 12 weeks</option>
+                  <option value="26">Every 26 weeks</option>
+                  <option value="52">Every 52 weeks</option>
+                </select>
+              </Field>
+              <Field label="Or exact date">
+                <input className={inputClass} type="date" name="reviewDate" />
+              </Field>
+              <Button type="submit" variant="secondary">
+                Set recall
+              </Button>
+            </ToastForm>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>03 · Notes</CardTitle>
           {notes.length > 0 ? (
             <Datum className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-xs text-muted">
               {notes.length}

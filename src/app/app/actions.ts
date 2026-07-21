@@ -154,6 +154,36 @@ export async function addManagementNoteAction(
   return { ok: true };
 }
 
+export async function setRecallAction(
+  patientId: string,
+  lesionId: string,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getOrgContext();
+  const weeks = num(formData, "intervalWeeks");
+  const dateStr = text(formData, "reviewDate");
+
+  let nextReviewAt: Date | null = null;
+  let recallIntervalDays: number | null = null;
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!Number.isNaN(d.getTime())) nextReviewAt = d;
+  } else if (weeks && weeks > 0) {
+    recallIntervalDays = weeks * 7;
+    nextReviewAt = new Date(Date.now() + recallIntervalDays * 86_400_000);
+  }
+  if (weeks && weeks > 0) recallIntervalDays = weeks * 7;
+
+  try {
+    await managementService.setRecall(ctx, { lesionId, nextReviewAt, recallIntervalDays });
+  } catch {
+    return { ok: false, error: "Couldn't set the recall." };
+  }
+  revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  revalidatePath("/app");
+  return { ok: true };
+}
+
 export type GenerateInsightState = { ok: boolean; error?: string };
 
 export async function generateEvolutionInsightAction(
