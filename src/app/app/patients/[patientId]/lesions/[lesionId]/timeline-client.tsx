@@ -21,8 +21,12 @@ import {
 } from "@/components/ui/instrument";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { classificationColor } from "@/lib/enums";
-import { cn, formatDate, formatPercent } from "@/lib/utils";
+import { cn, formatDate, formatLesionSite, formatPercent } from "@/lib/utils";
 import { chartedMetricKeys, metricLabel } from "@/lib/schemas/metrics";
+import {
+  ScanLightbox,
+  type LightboxScan,
+} from "@/app/app/patients/[patientId]/lesions/[lesionId]/scan-lightbox";
 
 type Point = {
   scanId: string;
@@ -101,7 +105,15 @@ const TrendChart = dynamic(
   },
 );
 
-function ScanImage({ src, className }: { src: string | null; className?: string }) {
+function ScanImage({
+  src,
+  className,
+  onOpen,
+}: {
+  src: string | null;
+  className?: string;
+  onOpen?: () => void;
+}) {
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
@@ -115,7 +127,7 @@ function ScanImage({ src, className }: { src: string | null; className?: string 
       </div>
     );
   }
-  return (
+  const image = (
     <div className={cn("relative overflow-hidden bg-surface-3", className)}>
       <Image
         src={src}
@@ -128,6 +140,17 @@ function ScanImage({ src, className }: { src: string | null; className?: string 
         className="object-cover"
       />
     </div>
+  );
+  if (!onOpen) return image;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="View full image"
+      className="block w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      {image}
+    </button>
   );
 }
 
@@ -162,9 +185,27 @@ export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
   const [mode, setMode] = useState<"timeline" | "trends" | "compare">("timeline");
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(Math.max(0, data.points.length - 1));
+  const [lightboxScanId, setLightboxScanId] = useState<string | null>(null);
   const latest = data.points.at(-1);
   const a = data.points[compareA];
   const b = data.points[compareB];
+
+  const site = formatLesionSite(data.lesion.bodySide, data.lesion.bodyRegion);
+  const imagedScans: LightboxScan[] = useMemo(
+    () =>
+      data.points
+        .filter((p) => p.primaryImageUrl)
+        .map((p) => ({
+          scanId: p.scanId,
+          capturedAt: p.capturedAt,
+          source: p.source,
+          label: p.label,
+          confidence: p.confidence,
+          primaryImageUrl: p.primaryImageUrl as string,
+        })),
+    [data.points],
+  );
+  const lightboxIndex = imagedScans.findIndex((s) => s.scanId === lightboxScanId);
 
   const confidenceSeries = useMemo(
     () =>
@@ -199,7 +240,11 @@ export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
       </div>
       <div className="overflow-hidden rounded-sm border border-border">
         <ReticleFrame>
-          <ScanImage src={point.primaryImageUrl} className="aspect-square w-full" />
+          <ScanImage
+            src={point.primaryImageUrl}
+            className="aspect-square w-full"
+            onOpen={point.primaryImageUrl ? () => setLightboxScanId(point.scanId) : undefined}
+          />
         </ReticleFrame>
         <SpecimenBar
           className="truncate"
@@ -300,6 +345,11 @@ export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
                             <ScanImage
                               src={point.primaryImageUrl}
                               className="aspect-square w-full"
+                              onOpen={
+                                point.primaryImageUrl
+                                  ? () => setLightboxScanId(point.scanId)
+                                  : undefined
+                              }
                             />
                           </ReticleFrame>
                           <SpecimenBar
@@ -461,6 +511,15 @@ export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
           </div>
           {comparePanel(b, "B")}
         </Fascia>
+      ) : null}
+
+      {lightboxScanId && lightboxIndex >= 0 ? (
+        <ScanLightbox
+          scans={imagedScans}
+          index={lightboxIndex}
+          site={site}
+          onClose={() => setLightboxScanId(null)}
+        />
       ) : null}
     </div>
   );
