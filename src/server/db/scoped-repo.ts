@@ -234,6 +234,16 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
         return lesion;
       },
 
+      async softDelete(idValue: string) {
+        const [lesion] = await client
+          .update(lesions)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(activeLesion(idValue))
+          .returning();
+        if (!lesion) throw notFound();
+        return lesion;
+      },
+
       async setRiskAndBaseline(input: {
         lesionId: string;
         currentRisk: ClassificationLabel;

@@ -29,6 +29,31 @@ export async function createPatientAction(formData: FormData) {
   redirect(`/app/patients/${patient.id}`);
 }
 
+export async function updatePatientAction(patientId: string, formData: FormData) {
+  const ctx = await getOrgContext();
+  await patientService.update(ctx, {
+    id: patientId,
+    firstName: text(formData, "firstName"),
+    lastName: text(formData, "lastName"),
+    dateOfBirth: text(formData, "dateOfBirth"),
+    mrn: text(formData, "mrn"),
+    email: text(formData, "email"),
+    phone: text(formData, "phone"),
+    address: text(formData, "address"),
+    notes: text(formData, "notes"),
+  });
+  revalidatePath("/app/patients");
+  revalidatePath(`/app/patients/${patientId}`);
+  redirect(`/app/patients/${patientId}`);
+}
+
+export async function deletePatientAction(patientId: string) {
+  const ctx = await getOrgContext();
+  await patientService.softDelete(ctx, patientId);
+  revalidatePath("/app/patients");
+  redirect("/app/patients");
+}
+
 export async function createLesionAction(patientId: string, formData: FormData) {
   const ctx = await getOrgContext();
   const lesion = await lesionService.create(ctx, {
@@ -40,6 +65,32 @@ export async function createLesionAction(patientId: string, formData: FormData) 
   });
   revalidatePath(`/app/patients/${patientId}`);
   redirect(`/app/patients/${patientId}/lesions/${lesion.id}`);
+}
+
+export async function updateLesionAction(
+  patientId: string,
+  lesionId: string,
+  formData: FormData,
+) {
+  const ctx = await getOrgContext();
+  await lesionService.update(ctx, {
+    id: lesionId,
+    patientId,
+    bodyRegion: text(formData, "bodyRegion") as never,
+    bodySide: text(formData, "bodySide") as never,
+    bodyLocationNote: text(formData, "bodyLocationNote"),
+    description: text(formData, "description"),
+  });
+  revalidatePath(`/app/patients/${patientId}`);
+  revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  redirect(`/app/patients/${patientId}/lesions/${lesionId}`);
+}
+
+export async function deleteLesionAction(patientId: string, lesionId: string) {
+  const ctx = await getOrgContext();
+  await lesionService.softDelete(ctx, lesionId);
+  revalidatePath(`/app/patients/${patientId}`);
+  redirect(`/app/patients/${patientId}`);
 }
 
 export async function setManagementStatusAction(

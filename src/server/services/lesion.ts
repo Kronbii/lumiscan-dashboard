@@ -129,6 +129,16 @@ export const lesionService = {
     return lesion;
   },
 
+  async softDelete(ctx: OrgContext, id: string) {
+    const lesion = await repo(ctx).lesions.softDelete(id);
+    await audit(ctx, {
+      action: "lesion.soft_delete",
+      resourceType: "lesion",
+      resourceId: lesion.id,
+    });
+    return lesion;
+  },
+
   async timeline(ctx: OrgContext, lesionId: string) {
     const scoped = repo(ctx);
     const lesion = await scoped.lesions.getById(lesionId);

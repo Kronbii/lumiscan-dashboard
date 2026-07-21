@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Plus, ScanLine } from "lucide-react";
+import { ChevronRight, Pencil, Plus, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,11 +79,18 @@ export default async function PatientDetailPage({
           </span>
         }
         actions={
-          <Button asChild>
-            <Link href={`/app/patients/${patient.id}/lesions/new`}>
-              <Plus strokeWidth={1.75} /> New lesion
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="secondary">
+              <Link href={`/app/patients/${patient.id}/edit`}>
+                <Pencil strokeWidth={1.75} /> Edit
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/app/patients/${patient.id}/lesions/new`}>
+                <Plus strokeWidth={1.75} /> New lesion
+              </Link>
+            </Button>
+          </>
         }
       />
 

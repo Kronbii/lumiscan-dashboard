@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +76,11 @@ export default async function LesionDetailPage({
         description={timeline.lesion.bodyLocationNote}
         actions={
           <>
+            <Button asChild variant="secondary">
+              <Link href={`/app/patients/${patientId}/lesions/${lesionId}/edit`}>
+                <Pencil strokeWidth={1.75} /> Edit
+              </Link>
+            </Button>
             <Button asChild variant="secondary">
               <Link href={`/app/patients/${patientId}/lesions/${lesionId}/management`}>
                 <ClipboardList strokeWidth={1.75} /> Management
