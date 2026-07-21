@@ -28,6 +28,7 @@ import {
   ScanLightbox,
   type LightboxScan,
 } from "@/app/app/patients/[patientId]/lesions/[lesionId]/scan-lightbox";
+import { CompareOverlay } from "@/app/app/patients/[patientId]/lesions/[lesionId]/compare-overlay";
 
 type Point = {
   scanId: string;
@@ -194,6 +195,7 @@ export function LesionTimelineClient({
   const [mode, setMode] = useState<"timeline" | "trends" | "compare">("timeline");
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(Math.max(0, data.points.length - 1));
+  const [compareView, setCompareView] = useState<"overlay" | "side">("overlay");
   const [lightboxScanId, setLightboxScanId] = useState<string | null>(null);
   const latest = data.points.at(-1);
   const a = data.points[compareA];
@@ -265,6 +267,49 @@ export function LesionTimelineClient({
         confidence={formatPercent(point.confidence)}
         className="justify-self-start"
       />
+    </div>
+  );
+
+  const compareMetrics = (pa: Point, pb: Point) => (
+    <div className="order-last bg-surface p-4 lg:order-0">
+      <Overline className="block">Elapsed</Overline>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <Datum className="text-2xl font-medium text-foreground">
+          {Math.abs(
+            Math.round(
+              (new Date(pb.capturedAt).getTime() - new Date(pa.capturedAt).getTime()) /
+                86_400_000,
+            ),
+          )}
+        </Datum>
+        <span className="text-xs text-faint">days</span>
+      </div>
+      <div className="mt-4 grid gap-3 border-t border-border pt-4">
+        {chartedMetricKeys.map((metric) => {
+          const aVal = typeof pa.metrics[metric] === "number" ? (pa.metrics[metric] as number) : null;
+          const bVal = typeof pb.metrics[metric] === "number" ? (pb.metrics[metric] as number) : null;
+          const delta = aVal !== null && bVal !== null ? Number((bVal - aVal).toFixed(2)) : null;
+          return (
+            <div key={metric} className="grid gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <Overline>{metricLabel(metric)}</Overline>
+                {delta === null ? (
+                  <Datum className="text-xs text-faint">N/A</Datum>
+                ) : (
+                  <Delta
+                    value={delta}
+                    risk={delta > 0 ? "worse" : delta < 0 ? "better" : "stable"}
+                    precision={2}
+                  />
+                )}
+              </div>
+              <Datum className="text-xs text-muted">
+                {aVal ?? "—"} → {bVal ?? "—"}
+              </Datum>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -474,60 +519,75 @@ export function LesionTimelineClient({
       ) : null}
 
       {mode === "compare" && a && b ? (
-        <Fascia className="lg:grid-cols-[minmax(0,1fr)_260px_minmax(0,1fr)]">
-          {comparePanel(a, "A")}
-          <div className="order-last bg-surface p-4 lg:order-0">
-            <Overline className="block">Elapsed</Overline>
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <Datum className="text-2xl font-medium text-foreground">
-                {Math.abs(
-                  Math.round(
-                    (new Date(b.capturedAt).getTime() -
-                      new Date(a.capturedAt).getTime()) /
-                      86_400_000,
-                  ),
-                )}
-              </Datum>
-              <span className="text-xs text-faint">days</span>
-            </div>
-            <div className="mt-4 grid gap-3 border-t border-border pt-4">
-              {chartedMetricKeys.map((metric) => {
-                const aVal =
-                  typeof a.metrics[metric] === "number"
-                    ? (a.metrics[metric] as number)
-                    : null;
-                const bVal =
-                  typeof b.metrics[metric] === "number"
-                    ? (b.metrics[metric] as number)
-                    : null;
-                const delta =
-                  aVal !== null && bVal !== null
-                    ? Number((bVal - aVal).toFixed(2))
-                    : null;
-                return (
-                  <div key={metric} className="grid gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <Overline>{metricLabel(metric)}</Overline>
-                      {delta === null ? (
-                        <Datum className="text-xs text-faint">N/A</Datum>
-                      ) : (
-                        <Delta
-                          value={delta}
-                          risk={delta > 0 ? "worse" : delta < 0 ? "better" : "stable"}
-                          precision={2}
-                        />
-                      )}
-                    </div>
-                    <Datum className="text-xs text-muted">
-                      {aVal ?? "—"} → {bVal ?? "—"}
-                    </Datum>
-                  </div>
-                );
-              })}
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2">
+              <span className="datum text-[0.625rem] uppercase tracking-[0.08em] text-faint">A</span>
+              <select
+                value={compareA}
+                onChange={(e) => setCompareA(Number(e.target.value))}
+                aria-label="Baseline scan"
+                className="datum h-8 rounded-sm border border-border-strong bg-surface px-2 text-xs text-foreground"
+              >
+                {data.points.map((pt, i) => (
+                  <option key={pt.scanId} value={i}>
+                    {formatDate(pt.capturedAt)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span aria-hidden className="text-faint">→</span>
+            <label className="flex items-center gap-2">
+              <span className="datum text-[0.625rem] uppercase tracking-[0.08em] text-faint">B</span>
+              <select
+                value={compareB}
+                onChange={(e) => setCompareB(Number(e.target.value))}
+                aria-label="Latest scan"
+                className="datum h-8 rounded-sm border border-border-strong bg-surface px-2 text-xs text-foreground"
+              >
+                {data.points.map((pt, i) => (
+                  <option key={pt.scanId} value={i}>
+                    {formatDate(pt.capturedAt)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="ml-auto inline-flex rounded-sm border border-border-strong">
+              {(["overlay", "side"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={compareView === v}
+                  onClick={() => setCompareView(v)}
+                  className={cn(
+                    "datum h-7 border-l border-border-strong px-3 text-[0.6875rem] font-medium uppercase tracking-[0.08em] transition-colors first:border-l-0",
+                    compareView === v
+                      ? "bg-foreground text-surface"
+                      : "bg-surface text-muted hover:bg-surface-2 hover:text-foreground",
+                  )}
+                >
+                  {v === "overlay" ? "Overlay" : "Side by side"}
+                </button>
+              ))}
             </div>
           </div>
-          {comparePanel(b, "B")}
-        </Fascia>
+
+          {compareView === "overlay" ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <CompareOverlay
+                a={{ url: a.primaryImageUrl, date: a.capturedAt }}
+                b={{ url: b.primaryImageUrl, date: b.capturedAt }}
+              />
+              {compareMetrics(a, b)}
+            </div>
+          ) : (
+            <Fascia className="lg:grid-cols-[minmax(0,1fr)_260px_minmax(0,1fr)]">
+              {comparePanel(a, "A")}
+              {compareMetrics(a, b)}
+              {comparePanel(b, "B")}
+            </Fascia>
+          )}
+        </div>
       ) : null}
 
       {lightboxScanId && lightboxIndex >= 0 ? (
