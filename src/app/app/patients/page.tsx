@@ -4,11 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  classificationTone,
-  Datum,
-  StatusChip,
-} from "@/components/ui/instrument";
+import { classificationTone, Datum, StatusChip } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
@@ -51,10 +47,20 @@ const flaggedRule: Record<string, string> = {
 
 export default async function PatientsPage() {
   const ctx = await getOrgContext();
-  const patients = await patientService.list(ctx);
-  const lesionsByPatient = await Promise.all(
-    patients.map((patient) => lesionService.listByPatient(ctx, patient.id)),
-  );
+  const [patients, lesions] = await Promise.all([
+    patientService.list(ctx),
+    lesionService.list(ctx),
+  ]);
+  const lesionsByPatient = new Map<string, typeof lesions>();
+
+  for (const lesion of lesions) {
+    const existing = lesionsByPatient.get(lesion.patientId);
+    if (existing) {
+      existing.push(lesion);
+    } else {
+      lesionsByPatient.set(lesion.patientId, [lesion]);
+    }
+  }
 
   return (
     <div className="grid gap-7">
@@ -95,17 +101,15 @@ export default async function PatientsPage() {
                     <th className="overline px-4 font-medium">MRN</th>
                     <th className="overline px-4 font-medium">Date of birth</th>
                     <th className="overline px-4 text-right font-medium">Age</th>
-                    <th className="overline px-4 text-right font-medium">
-                      Lesions
-                    </th>
+                    <th className="overline px-4 text-right font-medium">Lesions</th>
                     <th className="overline px-4 font-medium">Highest risk</th>
                     <th className="w-10 px-4" />
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map((patient, i) => {
+                  {patients.map((patient) => {
                     const name = `${patient.firstName} ${patient.lastName}`;
-                    const lesions = lesionsByPatient[i] ?? [];
+                    const lesions = lesionsByPatient.get(patient.id) ?? [];
                     const risk = highestRisk(
                       lesions.map((lesion) => lesion.currentRisk),
                     );
@@ -128,9 +132,7 @@ export default async function PatientsPage() {
                           </Link>
                         </td>
                         <td className="px-4">
-                          <Datum className="text-xs text-muted">
-                            {patient.mrn}
-                          </Datum>
+                          <Datum className="text-xs text-muted">{patient.mrn}</Datum>
                         </td>
                         <td className="px-4">
                           <Datum className="text-xs text-muted">
@@ -141,21 +143,14 @@ export default async function PatientsPage() {
                           <Datum className="text-xs text-muted">
                             {age(patient.dateOfBirth)}
                           </Datum>
-                          <span className="ml-1 text-[0.6875rem] text-faint">
-                            yrs
-                          </span>
+                          <span className="ml-1 text-[0.6875rem] text-faint">yrs</span>
                         </td>
                         <td className="px-4 text-right">
-                          <Datum className="text-xs text-muted">
-                            {lesions.length}
-                          </Datum>
+                          <Datum className="text-xs text-muted">{lesions.length}</Datum>
                         </td>
                         <td className="px-4">
                           {risk ? (
-                            <StatusChip
-                              label={risk}
-                              tone={classificationTone(risk)}
-                            />
+                            <StatusChip label={risk} tone={classificationTone(risk)} />
                           ) : (
                             <Datum className="text-xs text-faint">—</Datum>
                           )}
@@ -166,10 +161,7 @@ export default async function PatientsPage() {
                             className="flex justify-end text-faint transition-colors group-hover:text-muted"
                             aria-label={`Open ${name}`}
                           >
-                            <ChevronRight
-                              className="size-4"
-                              strokeWidth={1.75}
-                            />
+                            <ChevronRight className="size-4" strokeWidth={1.75} />
                           </Link>
                         </td>
                       </tr>

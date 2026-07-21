@@ -82,12 +82,11 @@ export function ImageDropzone({ site }: { site: string }) {
             <img
               src={previewUrl}
               alt="Selected dermoscopic capture"
+              decoding="async"
               className="max-h-72 w-full object-contain"
             />
           </ReticleFrame>
-          <SpecimenBar
-            items={[site, file.name, formatSize(file.size), "MANUAL"]}
-          />
+          <SpecimenBar items={[site, file.name, formatSize(file.size), "MANUAL"]} />
         </span>
       ) : (
         <ReticleFrame
@@ -101,9 +100,7 @@ export function ImageDropzone({ site }: { site: string }) {
             <span className="text-[0.8125rem] font-semibold text-foreground">
               Drop capture or browse
             </span>
-            <span className="text-xs text-muted">
-              JPEG, PNG or WebP · up to 15 MB
-            </span>
+            <span className="text-xs text-muted">JPEG, PNG or WebP · up to 15 MB</span>
           </span>
         </ReticleFrame>
       )}

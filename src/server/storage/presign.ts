@@ -98,6 +98,38 @@ export async function getSignedViewUrlForObjectKey(
   return getSignedUrl(client, command, { expiresIn: 300 });
 }
 
+/*
+  Stable, same-origin path the browser uses to load a stored scan image. The
+  bytes are streamed by /api/scan-images and optimized to WebP by next/image —
+  the object-storage endpoint is never exposed to the browser, so images work
+  identically on localhost, over the LAN, and on a hosted deployment.
+*/
+export function scanImageProxyPath(objectKey: string) {
+  return `/api/scan-images/${objectKey.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/*
+  Reads a scan image's bytes for the org-scoped proxy route. The org-prefix
+  check (and a traversal guard) keep one clinic from reading another's objects.
+*/
+export async function getScanImageObject(ctx: OrgContext, objectKey: string) {
+  if (objectKey.includes("..") || !objectKey.startsWith(`org_${ctx.orgId}/`)) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Image not found." });
+  }
+
+  const response = await client.send(
+    new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: objectKey }),
+  );
+  if (!response.Body) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Image not found." });
+  }
+
+  return {
+    bytes: await response.Body.transformToByteArray(),
+    contentType: response.ContentType ?? "application/octet-stream",
+  };
+}
+
 export async function uploadClinicalImageFromFile(
   ctx: OrgContext,
   input: {

@@ -28,8 +28,13 @@ export default async function PatientDetailPage({
 }) {
   const { patientId } = await params;
   const ctx = await getOrgContext();
-  const patient = await patientService.getById(ctx, patientId);
-  const lesions = await lesionService.listByPatient(ctx, patientId);
+  // patientService.getById throws NOT_FOUND for a missing/deleted patient, so
+  // the unchecked lesion list can skip its own redundant patient lookup — the
+  // two indexed queries then run in parallel instead of a 3-query waterfall.
+  const [patient, lesions] = await Promise.all([
+    patientService.getById(ctx, patientId),
+    lesionService.listByPatientUnchecked(ctx, patientId),
+  ]);
   const name = `${patient.firstName} ${patient.lastName}`;
 
   const details = [
@@ -44,11 +49,13 @@ export default async function PatientDetailPage({
   // Column count must match the cell count exactly — a ragged seam grid
   // exposes empty border-colored cells.
   const fasciaCols =
-    { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4", 5: "xl:grid-cols-5", 6: "xl:grid-cols-6" }[
-      details.length
-    ] ?? "xl:grid-cols-3";
-  const lastCellSpan =
-    details.length % 2 === 1 ? "col-span-2 xl:col-span-1" : "";
+    {
+      3: "xl:grid-cols-3",
+      4: "xl:grid-cols-4",
+      5: "xl:grid-cols-5",
+      6: "xl:grid-cols-6",
+    }[details.length] ?? "xl:grid-cols-3";
+  const lastCellSpan = details.length % 2 === 1 ? "col-span-2 xl:col-span-1" : "";
 
   return (
     <div className="grid gap-8">

@@ -9,8 +9,24 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: "chromium-desktop",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "chromium-tablet",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 768, height: 1024 },
+      },
+    },
+    {
+      name: "chromium-mobile",
+      use: {
+        ...devices["Pixel 5"],
+      },
     },
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER

@@ -2,12 +2,7 @@ import Link from "next/link";
 import { ClipboardList, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Datum, Overline } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, formatLesionSite } from "@/lib/utils";
@@ -40,15 +35,18 @@ export default async function LesionDetailPage({
 }) {
   const { patientId, lesionId } = await params;
   const ctx = await getOrgContext();
-  const timelineRaw = await lesionService.timeline(ctx, lesionId);
+  const scoped = repo(ctx);
+  const [timelineRaw, currentInsight, management] = await Promise.all([
+    lesionService.timeline(ctx, lesionId),
+    scoped.insights.getCurrent({
+      subjectType: "LESION",
+      subjectId: lesionId,
+      kind: "EVOLUTION_NARRATIVE",
+    }),
+    managementService.getPlanWithNotes(ctx, lesionId),
+  ]);
+  const { plan, notes } = management;
   const timeline = JSON.parse(JSON.stringify(timelineRaw)) as typeof timelineRaw;
-  const currentInsight = await repo(ctx).insights.getCurrent({
-    subjectType: "LESION",
-    subjectId: lesionId,
-    kind: "EVOLUTION_NARRATIVE",
-  });
-  const plan = await managementService.getPlan(ctx, lesionId);
-  const notes = await managementService.listNotes(ctx, lesionId);
   const canManage = ctx.role !== "NURSE";
   const status = plan?.status ?? "MONITORING";
   const generateAction = generateEvolutionInsightAction.bind(null, patientId, lesionId);
@@ -169,7 +167,11 @@ export default async function LesionDetailPage({
                         required
                       />
                     </Field>
-                    <Button type="submit" variant="secondary" className="justify-self-start">
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      className="justify-self-start"
+                    >
                       Add note
                     </Button>
                   </form>

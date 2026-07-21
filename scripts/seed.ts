@@ -1,21 +1,72 @@
+import { createHash } from "node:crypto";
+import { CreateBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { env } from "@/env";
 import { createDeviceOrgContext, type OrgContext } from "@/server/auth/org-context";
-import { upsertMembership, upsertOrganization, upsertUser } from "@/server/db/system-repo";
+import {
+  upsertMembership,
+  upsertOrganization,
+  upsertUser,
+} from "@/server/db/system-repo";
 import { repo } from "@/server/db/scoped-repo";
+import { sql } from "@/server/db/client";
 import { patientService } from "@/server/services/patient";
 import { lesionService } from "@/server/services/lesion";
 import { createFinalizedScan } from "@/server/services/scan-write";
 import { deviceService } from "@/server/services/device";
 
+const seedImage = Buffer.from(
+  "UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAgA0JaQAA3AA/vuUAAA=",
+  "base64",
+);
+const seedImageHash = createHash("sha256").update(seedImage).digest("hex");
+
+const storage = new S3Client({
+  region: env.S3_REGION,
+  endpoint: env.S3_ENDPOINT,
+  forcePathStyle: true,
+  credentials: {
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+  },
+});
+
+let bucketReady = false;
+
+async function ensureBucket() {
+  if (bucketReady) return;
+  try {
+    await storage.send(new CreateBucketCommand({ Bucket: env.S3_BUCKET }));
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    if (!["BucketAlreadyExists", "BucketAlreadyOwnedByYou"].includes(name)) {
+      throw error;
+    }
+  }
+  bucketReady = true;
+}
+
+async function putSeedImage(objectKey: string) {
+  await ensureBucket();
+  await storage.send(
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: objectKey,
+      Body: seedImage,
+      ContentType: "image/webp",
+    }),
+  );
+}
+
 async function makeContext(): Promise<OrgContext> {
   const org = await upsertOrganization({
-    clerkOrgId: "org_demo_clinic",
-    name: "Lumiscan Demo Clinic",
-    slug: "demo-clinic",
+    clerkOrgId: "prototype_org",
+    name: "Prototype Clinic",
+    slug: "prototype-clinic",
   });
   const user = await upsertUser({
-    clerkUserId: "user_demo_owner",
-    email: "owner@example.invalid",
-    displayName: "Demo Owner",
+    clerkUserId: "prototype_user",
+    email: "prototype@example.invalid",
+    displayName: "Prototype Doctor",
   });
   const membership = await upsertMembership({
     orgId: org.id,
@@ -60,8 +111,12 @@ async function main() {
     }));
 
   const scans = await scoped.scans.listByLesion(lesion.id);
+  const baseKey = `org_${ctx.orgId}/patient_${patient.id}/lesion_${lesion.id}/seed`;
+  await Promise.all([
+    putSeedImage(`${baseKey}/scan-1.webp`),
+    putSeedImage(`${baseKey}/scan-2.webp`),
+  ]);
   if (scans.length < 3) {
-    const baseKey = `org_${ctx.orgId}/patient_${patient.id}/lesion_${lesion.id}/seed`;
     await createFinalizedScan(
       {
         lesionId: lesion.id,
@@ -79,7 +134,7 @@ async function main() {
             objectKey: `${baseKey}/scan-1.webp`,
             imageType: "DERMOSCOPIC",
             isPrimary: true,
-            contentHash: "seedhash000000000000000000000000000001",
+            contentHash: seedImageHash,
           },
         ],
       },
@@ -102,7 +157,7 @@ async function main() {
             objectKey: `${baseKey}/scan-2.webp`,
             imageType: "DERMOSCOPIC",
             isPrimary: true,
-            contentHash: "seedhash000000000000000000000000000002",
+            contentHash: seedImageHash,
           },
         ],
       },
@@ -127,7 +182,12 @@ async function main() {
   console.log(`Seed complete. Patient ${patient.id}, lesion ${lesion.id}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    storage.destroy();
+    await sql.end({ timeout: 5 });
+  });

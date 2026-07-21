@@ -10,7 +10,7 @@ import type { LesionCreateInput, LesionUpdateInput } from "@/lib/schemas/lesion"
 import type { OrgContext } from "@/server/auth/org-context";
 import { audit } from "@/server/audit/audit";
 import { repo, type TimelineScanRow } from "@/server/db/scoped-repo";
-import { getSignedViewUrlForObjectKey } from "@/server/storage/presign";
+import { scanImageProxyPath } from "@/server/storage/presign";
 
 export type MetricDelta = {
   metric: ChartedMetricKey;
@@ -50,7 +50,9 @@ function deltaFor(
   const value = numericMetric(current, key);
   const previousValue = previous ? numericMetric(previous, key) : null;
   const delta =
-    value === null || previousValue === null ? null : Number((value - previousValue).toFixed(2));
+    value === null || previousValue === null
+      ? null
+      : Number((value - previousValue).toFixed(2));
   const direction =
     delta === null ? "unknown" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
   return { metric: key, value, previousValue, delta, direction };
@@ -90,8 +92,17 @@ export function buildTimelineRows(rows: TimelineScanRow[]) {
 }
 
 export const lesionService = {
+  list(ctx: OrgContext) {
+    return repo(ctx).lesions.list();
+  },
+
   listByPatient(ctx: OrgContext, patientId: string) {
     return repo(ctx).lesions.listByPatient(patientId);
+  },
+
+  // For callers that validate the patient separately (patient-detail page).
+  listByPatientUnchecked(ctx: OrgContext, patientId: string) {
+    return repo(ctx).lesions.listByPatientUnchecked(patientId);
   },
 
   getById(ctx: OrgContext, id: string) {
@@ -121,36 +132,38 @@ export const lesionService = {
   async timeline(ctx: OrgContext, lesionId: string) {
     const scoped = repo(ctx);
     const lesion = await scoped.lesions.getById(lesionId);
-    const patient = await scoped.patients.getById(lesion.patientId);
-    const rows = await scoped.scans.listByLesion(lesionId);
+    const [patient, rows] = await Promise.all([
+      scoped.patients.getById(lesion.patientId),
+      scoped.scans.listByLesionIds([lesionId]),
+    ]);
     const prepared = buildTimelineRows(rows);
 
-    const points: TimelinePoint[] = await Promise.all(
-      prepared.map(async (row) => ({
-        scanId: row.scan.id,
-        capturedAt: row.scan.capturedAt.toISOString(),
-        source: row.scan.source,
-        label: row.classification.label,
-        confidence: Number(row.classification.confidence),
-        confidenceLabel: row.classification.confidenceLabel,
-        metrics: row.classification.metrics,
-        metricsScale: row.classification.metricsScale,
-        partialData: row.partialData,
-        primaryObjectKey: row.primary?.objectKey ?? null,
-        primaryImageUrl: row.primary
-          ? await getSignedViewUrlForObjectKey(ctx, row.primary.objectKey)
-          : null,
-        elapsedDaysFromPrevious: row.elapsedDaysFromPrevious,
-        elapsedDaysFromBaseline: row.elapsedDaysFromBaseline,
-        deltas: row.deltas,
-      })),
-    );
+    const points: TimelinePoint[] = prepared.map((row) => ({
+      scanId: row.scan.id,
+      capturedAt: row.scan.capturedAt.toISOString(),
+      source: row.scan.source,
+      label: row.classification.label,
+      confidence: Number(row.classification.confidence),
+      confidenceLabel: row.classification.confidenceLabel,
+      metrics: row.classification.metrics,
+      metricsScale: row.classification.metricsScale,
+      partialData: row.partialData,
+      primaryObjectKey: row.primary?.objectKey ?? null,
+      primaryImageUrl: row.primary
+        ? scanImageProxyPath(row.primary.objectKey)
+        : null,
+      elapsedDaysFromPrevious: row.elapsedDaysFromPrevious,
+      elapsedDaysFromBaseline: row.elapsedDaysFromBaseline,
+      deltas: row.deltas,
+    }));
 
     const metricSeries = Object.fromEntries(
       chartedMetricKeys.map((key) => [
         key,
         points
-          .filter((point) => !point.partialData && typeof point.metrics[key] === "number")
+          .filter(
+            (point) => !point.partialData && typeof point.metrics[key] === "number",
+          )
           .map((point) => ({
             scanId: point.scanId,
             capturedAt: point.capturedAt,

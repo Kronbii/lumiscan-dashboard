@@ -1,17 +1,20 @@
 import type { NextConfig } from "next";
 
-const storageEndpoint = process.env.S3_ENDPOINT
-  ? new URL(process.env.S3_ENDPOINT).origin
-  : "";
-
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    // Scan images are proxied same-origin (/api/scan-images) and re-encoded to
+    // WebP. Keys are content-addressed and immutable, so cache the optimized
+    // output for a month.
+    formats: ["image/webp"],
+    minimumCacheTTL: 2592000,
+  },
   async headers() {
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      `img-src 'self' data: blob:${storageEndpoint ? ` ${storageEndpoint}` : ""}`,
+      "img-src 'self' data: blob:",
       "connect-src 'self'",
       "frame-src 'self'",
       "font-src 'self' data:",
@@ -32,7 +35,7 @@ const nextConfig: NextConfig = {
           },
           { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },

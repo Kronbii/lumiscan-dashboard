@@ -17,8 +17,8 @@
     "playwright": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "seed": "tsx scripts/seed.ts",
-    "simulate-device": "tsx scripts/simulate-device.ts"
+    "seed": "tsx --env-file=.env --conditions=react-server scripts/seed.ts",
+    "simulate-device": "tsx --env-file=.env --conditions=react-server scripts/simulate-device.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

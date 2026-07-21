@@ -58,11 +58,7 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
     );
 
   const activeScan = (idValue: string) =>
-    and(
-      eq(scans.orgId, ctx.orgId),
-      eq(scans.id, idValue),
-      isNull(scans.deletedAt),
-    );
+    and(eq(scans.orgId, ctx.orgId), eq(scans.id, idValue), isNull(scans.deletedAt));
 
   return {
     patients: {
@@ -127,7 +123,8 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
           mrn: input.mrn,
           email: input.email === undefined ? undefined : cleanOptional(input.email),
           phone: input.phone === undefined ? undefined : cleanOptional(input.phone),
-          address: input.address === undefined ? undefined : cleanOptional(input.address),
+          address:
+            input.address === undefined ? undefined : cleanOptional(input.address),
           notes: input.notes === undefined ? undefined : cleanOptional(input.notes),
           updatedAt: new Date(),
         };
@@ -152,8 +149,25 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
     },
 
     lesions: {
+      async list() {
+        return client
+          .select()
+          .from(lesions)
+          .where(and(eq(lesions.orgId, ctx.orgId), isNull(lesions.deletedAt)))
+          .orderBy(desc(lesions.createdAt));
+      },
+
       async listByPatient(patientId: string) {
         await createScopedRepo(ctx, client).patients.getById(patientId);
+        return createScopedRepo(ctx, client).lesions.listByPatientUnchecked(
+          patientId,
+        );
+      },
+
+      // Same org+patient-scoped query without the extra patient getById round
+      // trip. Safe where the caller independently validates the patient (e.g.
+      // the patient-detail page fetches the patient in the same Promise.all).
+      async listByPatientUnchecked(patientId: string) {
         return client
           .select()
           .from(lesions)
@@ -243,8 +257,8 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
     },
 
     scans: {
-      async listByLesion(lesionId: string) {
-        await createScopedRepo(ctx, client).lesions.getById(lesionId);
+      async listByLesionIds(lesionIds: string[]) {
+        if (lesionIds.length === 0) return [];
         const rows = await client
           .select({
             scan: scans,
@@ -255,7 +269,7 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
           .where(
             and(
               eq(scans.orgId, ctx.orgId),
-              eq(scans.lesionId, lesionId),
+              inArray(scans.lesionId, lesionIds),
               isNull(scans.deletedAt),
             ),
           )
@@ -280,6 +294,31 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
           ...row,
           images: images.filter((image) => image.scanId === row.scan.id),
         }));
+      },
+
+      async listByLesion(lesionId: string) {
+        await createScopedRepo(ctx, client).lesions.getById(lesionId);
+        return createScopedRepo(ctx, client).scans.listByLesionIds([lesionId]);
+      },
+
+      // Newest N scans across the given lesions in a single ordered query, with
+      // no scan-image round trip. Used by the dashboard, which only needs the
+      // scan + classification, not the images listByLesionIds also stitches in.
+      async recentFlagged(lesionIds: string[], limit = 6) {
+        if (lesionIds.length === 0) return [];
+        return client
+          .select({ scan: scans, classification: classifications })
+          .from(scans)
+          .innerJoin(classifications, eq(classifications.scanId, scans.id))
+          .where(
+            and(
+              eq(scans.orgId, ctx.orgId),
+              inArray(scans.lesionId, lesionIds),
+              isNull(scans.deletedAt),
+            ),
+          )
+          .orderBy(desc(scans.capturedAt))
+          .limit(limit);
       },
 
       async getById(idValue: string) {
@@ -394,6 +433,39 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
     },
 
     management: {
+      async getPlanWithNotes(lesionId: string) {
+        const lesion = await createScopedRepo(ctx, client).lesions.getById(lesionId);
+        const [plan] = await client
+          .select()
+          .from(managementPlans)
+          .where(
+            and(
+              eq(managementPlans.orgId, ctx.orgId),
+              eq(managementPlans.lesionId, lesionId),
+              isNull(managementPlans.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        if (!plan) {
+          return { lesion, plan: null, notes: [] };
+        }
+
+        const notes = await client
+          .select()
+          .from(managementNotes)
+          .where(
+            and(
+              eq(managementNotes.orgId, ctx.orgId),
+              eq(managementNotes.planId, plan.id),
+              isNull(managementNotes.deletedAt),
+            ),
+          )
+          .orderBy(desc(managementNotes.createdAt));
+
+        return { lesion, plan, notes };
+      },
+
       async getPlan(lesionId: string) {
         await createScopedRepo(ctx, client).lesions.getById(lesionId);
         const [plan] = await client
@@ -466,21 +538,11 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
       },
 
       async listNotes(lesionId: string) {
-        const plan = await createScopedRepo(ctx, client).management.getPlan(
-          lesionId,
-        );
-        if (!plan) return [];
-        return client
-          .select()
-          .from(managementNotes)
-          .where(
-            and(
-              eq(managementNotes.orgId, ctx.orgId),
-              eq(managementNotes.planId, plan.id),
-              isNull(managementNotes.deletedAt),
-            ),
-          )
-          .orderBy(desc(managementNotes.createdAt));
+        const { notes } = await createScopedRepo(
+          ctx,
+          client,
+        ).management.getPlanWithNotes(lesionId);
+        return notes;
       },
     },
 

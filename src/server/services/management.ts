@@ -16,6 +16,10 @@ export const managementService = {
     return repo(ctx).management.listNotes(lesionId);
   },
 
+  async getPlanWithNotes(ctx: OrgContext, lesionId: string) {
+    return repo(ctx).management.getPlanWithNotes(lesionId);
+  },
+
   async setStatus(ctx: OrgContext, input: SetManagementStatusInput) {
     requireRole(ctx, ["OWNER", "ADMIN", "DOCTOR"]);
     const plan = await repo(ctx).management.setStatus(input.lesionId, input.status);

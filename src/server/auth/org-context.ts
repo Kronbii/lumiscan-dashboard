@@ -1,11 +1,16 @@
 import "server-only";
 
+import { cache } from "react";
 import type { AuditActor, UserRole } from "@/lib/enums";
 import {
+  findMirroredContext,
   upsertMembership,
   upsertOrganization,
   upsertUser,
 } from "@/server/db/system-repo";
+
+const PROTOTYPE_USER = "prototype_user";
+const PROTOTYPE_ORG = "prototype_org";
 
 export type OrgContext = {
   userId: string;
@@ -16,14 +21,28 @@ export type OrgContext = {
   deviceId?: string;
 };
 
-export async function getOrgContext(): Promise<OrgContext> {
+export const getOrgContext = cache(async function getOrgContext(): Promise<OrgContext> {
+  // Hot path: the prototype identity already exists, so a single indexed read
+  // replaces the three upsert writes that used to run on every request.
+  const existing = await findMirroredContext(PROTOTYPE_USER, PROTOTYPE_ORG);
+  if (existing) {
+    return {
+      userId: existing.user.id,
+      orgId: existing.organization.id,
+      role: existing.membership.role,
+      membershipId: existing.membership.id,
+      actorType: "USER",
+    };
+  }
+
+  // Cold path (first boot or after a DB reset): mirror the prototype identity in.
   const organization = await upsertOrganization({
-    clerkOrgId: "prototype_org",
+    clerkOrgId: PROTOTYPE_ORG,
     name: "Prototype Clinic",
     slug: "prototype-clinic",
   });
   const user = await upsertUser({
-    clerkUserId: "prototype_user",
+    clerkUserId: PROTOTYPE_USER,
     email: "prototype@example.invalid",
     displayName: "Prototype Doctor",
   });
@@ -41,7 +60,7 @@ export async function getOrgContext(): Promise<OrgContext> {
     membershipId: membership.id,
     actorType: "USER",
   };
-}
+});
 
 export function createDeviceOrgContext(input: {
   orgId: string;

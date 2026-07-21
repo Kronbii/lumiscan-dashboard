@@ -95,12 +95,12 @@ export default async function AppLayout({
 
       <div className="lg:pl-60">
         <header className="sticky top-0 z-20 flex h-12 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <span className="datum text-xs font-medium uppercase tracking-[0.08em] text-foreground">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="datum truncate text-xs font-medium uppercase tracking-[0.08em] text-foreground">
               Prototype Clinic
             </span>
-            <span className="h-3 w-px bg-border-strong" aria-hidden />
-            <span className="datum text-[0.6875rem] uppercase tracking-[0.08em] text-faint">
+            <span className="h-3 w-px shrink-0 bg-border-strong" aria-hidden />
+            <span className="datum truncate text-[0.6875rem] uppercase tracking-[0.08em] text-faint">
               {role}
             </span>
           </div>

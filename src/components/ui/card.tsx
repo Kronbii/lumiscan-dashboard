@@ -11,7 +11,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded border border-border bg-surface",
+        "min-w-0 rounded border border-border bg-surface",
         interactive && "transition-colors duration-100 hover:border-border-strong",
         className,
       )}
@@ -27,7 +27,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex min-h-11 items-center justify-between gap-3 border-b border-border px-4 py-2.5",
+        "flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-2.5",
         className,
       )}
       {...props}

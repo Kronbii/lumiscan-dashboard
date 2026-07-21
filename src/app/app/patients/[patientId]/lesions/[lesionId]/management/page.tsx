@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { NotebookPen } from "lucide-react";
-import {
-  addManagementNoteAction,
-  setManagementStatusAction,
-} from "@/app/app/actions";
+import { addManagementNoteAction, setManagementStatusAction } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,7 +15,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { managementStatuses } from "@/lib/enums";
 import { formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
-import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +33,10 @@ export default async function ManagementPage({
 }) {
   const { patientId, lesionId } = await params;
   const ctx = await getOrgContext();
-  const lesion = await lesionService.getById(ctx, lesionId);
-  const plan = await managementService.getPlan(ctx, lesionId);
-  const notes = await managementService.listNotes(ctx, lesionId);
+  const { lesion, plan, notes } = await managementService.getPlanWithNotes(
+    ctx,
+    lesionId,
+  );
   const canManage = ctx.role !== "NURSE";
   const status = plan?.status ?? "MONITORING";
   const setStatusAction = setManagementStatusAction.bind(null, patientId, lesionId);
@@ -63,10 +60,7 @@ export default async function ManagementPage({
       <Card>
         <CardHeader>
           <CardTitle>01 · Follow-up status</CardTitle>
-          <StatusChip
-            label={status.replaceAll("_", " ")}
-            tone={statusTone[status]}
-          />
+          <StatusChip label={status.replaceAll("_", " ")} tone={statusTone[status]} />
         </CardHeader>
         <CardContent className="grid gap-5">
           {canManage ? (

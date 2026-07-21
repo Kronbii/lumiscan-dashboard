@@ -13,7 +13,7 @@ export function Field({
   className?: string;
 }) {
   return (
-    <label className={cn("grid gap-1.5", className)}>
+    <label className={cn("grid min-w-0 gap-1.5", className)}>
       <span className="flex items-baseline justify-between gap-3">
         <span className="text-[0.8125rem] font-semibold text-foreground">
           {label}
@@ -26,11 +26,11 @@ export function Field({
 }
 
 export const inputClass =
-  "h-9 w-full rounded-sm border border-border-strong bg-surface px-3 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
+  "h-9 min-w-0 w-full rounded-sm border border-border-strong bg-surface px-3 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
 
 export const textareaClass =
-  "min-h-24 w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
+  "min-h-24 min-w-0 w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-faint hover:border-faint focus:border-primary focus:ring-2 focus:ring-[var(--ring)]";
 
 /* Device-read values arrive in a sunken mono well. */
 export const readonlyClass =
-  "datum h-9 w-full rounded-sm border border-border bg-surface-3 px-3 text-[0.8125rem] text-muted outline-none";
+  "datum h-9 min-w-0 w-full rounded-sm border border-border bg-surface-3 px-3 text-[0.8125rem] text-muted outline-none";

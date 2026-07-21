@@ -5,31 +5,23 @@ import { isFlaggedLabel } from "@/lib/enums";
 export const dashboardService = {
   async overview(ctx: OrgContext) {
     const scoped = repo(ctx);
-    const patients = await scoped.patients.list();
-    const flaggedLesions = (
-      await Promise.all(
-        patients.map(async (patient) => scoped.lesions.listByPatient(patient.id)),
-      )
-    )
-      .flat()
-      .filter((lesion) => isFlaggedLabel(lesion.currentRisk));
+    const [patients, lesions] = await Promise.all([
+      scoped.patients.list(),
+      scoped.lesions.list(),
+    ]);
+    const flaggedLesions = lesions.filter((lesion) =>
+      isFlaggedLabel(lesion.currentRisk),
+    );
+    const lesionById = new Map(flaggedLesions.map((lesion) => [lesion.id, lesion]));
 
     const recentScans = (
-      await Promise.all(
-        flaggedLesions.slice(0, 10).map(async (lesion) =>
-          (await scoped.scans.listByLesion(lesion.id)).map((row) => ({
-            ...row,
-            lesion,
-          })),
-        ),
-      )
+      await scoped.scans.recentFlagged([...lesionById.keys()], 6)
     )
-      .flat()
-      .sort(
-        (a, b) =>
-          b.scan.capturedAt.getTime() - a.scan.capturedAt.getTime(),
-      )
-      .slice(0, 6);
+      .map((row) => {
+        const lesion = lesionById.get(row.scan.lesionId);
+        return lesion ? { ...row, lesion } : null;
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
 
     return {
       counts: {

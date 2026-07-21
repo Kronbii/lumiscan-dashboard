@@ -76,7 +76,7 @@ export default async function DashboardPage() {
         </Fascia>
       </section>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>02 · Recent flagged scans</CardTitle>
           <Button asChild variant="ghost" size="sm">
@@ -100,16 +100,16 @@ export default async function DashboardPage() {
               >
                 <Link
                   href={`/app/patients/${row.lesion.patientId}/lesions/${row.scan.lesionId}`}
-                  className={`flex h-10 items-center gap-3 px-4 transition-colors duration-100 hover:bg-surface-2 ${
+                  className={`flex min-h-10 flex-wrap items-center gap-3 px-4 py-2 transition-colors duration-100 hover:bg-surface-2 sm:h-10 sm:flex-nowrap sm:py-0 ${
                     flaggedRule[row.classification.label] ?? ""
                   }`}
                 >
                   <Led tone={classificationTone(row.classification.label)} />
-                  <span className="min-w-0 flex-1 truncate">
+                  <span className="min-w-0 flex-1 basis-[calc(100%-1.25rem)] sm:basis-auto">
                     <span className="text-[0.8125rem] font-medium text-foreground">
                       {formatLesionSite(row.lesion.bodySide, row.lesion.bodyRegion)}
                     </span>
-                    <Datum className="ml-3 text-xs text-faint">
+                    <Datum className="block text-xs text-faint sm:ml-3 sm:inline">
                       {formatDate(row.scan.capturedAt)} · {humanize(row.scan.source)}
                     </Datum>
                   </span>
