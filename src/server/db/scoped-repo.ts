@@ -267,6 +267,15 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
     },
 
     scans: {
+      // Lightweight (lesionId, capturedAt) rows for the org — used to derive a
+      // last-scan date per patient on the register without pulling images.
+      async listCaptureDates() {
+        return client
+          .select({ lesionId: scans.lesionId, capturedAt: scans.capturedAt })
+          .from(scans)
+          .where(and(eq(scans.orgId, ctx.orgId), isNull(scans.deletedAt)));
+      },
+
       async listByLesionIds(lesionIds: string[]) {
         if (lesionIds.length === 0) return [];
         const rows = await client
