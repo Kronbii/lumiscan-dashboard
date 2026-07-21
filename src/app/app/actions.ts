@@ -176,6 +176,22 @@ export async function generateEvolutionInsightAction(
   return { ok: true };
 }
 
+export async function generateScanInsightAction(
+  patientId: string,
+  lesionId: string,
+  scanId: string,
+  kind: "CLINICAL_SUMMARY" | "PATIENT_EXPLANATION",
+): Promise<GenerateInsightState> {
+  const ctx = await getOrgContext();
+  try {
+    await generateInsight(ctx, { subjectType: "SCAN", subjectId: scanId, kind });
+  } catch {
+    return { ok: false, error: "Insight generation failed. Please try again." };
+  }
+  revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}/scans/${scanId}`);
+  return { ok: true };
+}
+
 export async function createDeviceAction(formData: FormData) {
   const ctx = await getOrgContext();
   const result = await deviceService.create(ctx, {

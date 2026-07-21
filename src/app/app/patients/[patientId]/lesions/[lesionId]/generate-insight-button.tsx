@@ -1,30 +1,33 @@
 "use client";
 
 import { useActionState } from "react";
-import { generateEvolutionInsightAction } from "@/app/app/actions";
+import type { GenerateInsightState } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
 
 /*
   AI insight generation can fail (rate limit, upstream error, unset key). This
   wraps the server action in useActionState so a failure shows an inline,
-  retryable message instead of throwing a 500 that takes down the whole page.
+  retryable message instead of throwing a 500. `action` is any bound insight
+  action (evolution narrative, clinical summary, patient handout).
 */
 export function GenerateInsightButton({
-  patientId,
-  lesionId,
+  action,
+  label = "Generate insight",
+  pendingLabel = "Generating…",
 }: {
-  patientId: string;
-  lesionId: string;
+  action: () => Promise<GenerateInsightState>;
+  label?: string;
+  pendingLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(
-    () => generateEvolutionInsightAction(patientId, lesionId),
-    null as { ok: boolean; error?: string } | null,
+    () => action(),
+    null as GenerateInsightState | null,
   );
 
   return (
     <form action={formAction} className="grid gap-2">
       <Button type="submit" variant="soft" className="w-full" disabled={pending}>
-        {pending ? "Generating…" : "Generate insight"}
+        {pending ? pendingLabel : label}
       </Button>
       {state && !state.ok && state.error ? (
         <p role="alert" className="text-xs text-malignant">

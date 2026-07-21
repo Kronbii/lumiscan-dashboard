@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { ImageOff, ScanLine } from "lucide-react";
@@ -181,7 +182,15 @@ function MetricCell({ delta }: { delta: Point["deltas"][number] }) {
   );
 }
 
-export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
+export function LesionTimelineClient({
+  data,
+  patientId,
+  lesionId,
+}: {
+  data: TimelineClientData;
+  patientId?: string;
+  lesionId?: string;
+}) {
   const [mode, setMode] = useState<"timeline" | "trends" | "compare">("timeline");
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(Math.max(0, data.points.length - 1));
@@ -422,6 +431,14 @@ export function LesionTimelineClient({ data }: { data: TimelineClientData }) {
                             </>
                           )}
                         </p>
+                        {patientId && lesionId ? (
+                          <Link
+                            href={`/app/patients/${patientId}/lesions/${lesionId}/scans/${point.scanId}`}
+                            className="datum text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-primary hover:underline"
+                          >
+                            Scan detail →
+                          </Link>
+                        ) : null}
                       </div>
                     </CardContent>
                   </Card>

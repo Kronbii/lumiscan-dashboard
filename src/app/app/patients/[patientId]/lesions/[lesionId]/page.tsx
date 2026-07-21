@@ -12,6 +12,7 @@ import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
 import {
   addManagementNoteAction,
+  generateEvolutionInsightAction,
   setManagementStatusAction,
 } from "@/app/app/actions";
 import { BodyMapField } from "@/components/body-map-field";
@@ -98,7 +99,7 @@ export default async function LesionDetailPage({
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <LesionTimelineClient data={timeline} />
+        <LesionTimelineClient data={timeline} patientId={patientId} lesionId={lesionId} />
 
         <aside className="grid h-fit gap-6">
           <Card>
@@ -148,7 +149,9 @@ export default async function LesionDetailPage({
                 </p>
               )}
               {canManage ? (
-                <GenerateInsightButton patientId={patientId} lesionId={lesionId} />
+                <GenerateInsightButton
+                  action={generateEvolutionInsightAction.bind(null, patientId, lesionId)}
+                />
               ) : null}
             </CardContent>
           </Card>

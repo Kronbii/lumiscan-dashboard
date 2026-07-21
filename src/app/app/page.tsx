@@ -99,7 +99,7 @@ export default async function DashboardPage() {
                 className="border-b border-border last:border-b-0"
               >
                 <Link
-                  href={`/app/patients/${row.lesion.patientId}/lesions/${row.scan.lesionId}`}
+                  href={`/app/patients/${row.lesion.patientId}/lesions/${row.scan.lesionId}/scans/${row.scan.id}`}
                   className={`flex min-h-10 flex-wrap items-center gap-3 px-4 py-2 transition-colors duration-100 hover:bg-surface-2 sm:h-10 sm:flex-nowrap sm:py-0 ${
                     flaggedRule[row.classification.label] ?? ""
                   }`}
