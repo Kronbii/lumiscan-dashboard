@@ -5,14 +5,14 @@ import { bodyRegions, bodySides, type BodyRegion, type BodySide } from "@/lib/en
 import { humanize } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-type View = "FRONT" | "BACK";
+export type View = "FRONT" | "BACK";
 type Shape =
   | { t: "ellipse"; cx: number; cy: number; rx: number; ry: number }
   | { t: "rect"; x: number; y: number; w: number; h: number; r: number };
-type Zone = { region: BodyRegion; side: BodySide; shape: Shape };
+export type Zone = { region: BodyRegion; side: BodySide; shape: Shape };
 
-const VB_W = 200;
-const VB_H = 360;
+export const VB_W = 200;
+export const VB_H = 360;
 
 // Shared limb/torso geometry (viewer coordinates). Anatomical left/right flip
 // between the front and back figures, which is medically correct.
@@ -31,7 +31,7 @@ const S = {
   footViewerRight: { t: "ellipse", cx: 113, cy: 300, rx: 11, ry: 9 } as Shape,
 };
 
-const FRONT: Zone[] = [
+export const FRONT: Zone[] = [
   { region: "HEAD", side: "MIDLINE", shape: S.head },
   { region: "NECK", side: "MIDLINE", shape: S.neck },
   { region: "CHEST", side: "MIDLINE", shape: S.torsoUpper },
@@ -46,7 +46,7 @@ const FRONT: Zone[] = [
   { region: "LEFT_FOOT", side: "LEFT", shape: S.footViewerRight },
 ];
 
-const BACK: Zone[] = [
+export const BACK: Zone[] = [
   { region: "HEAD", side: "MIDLINE", shape: S.head },
   { region: "NECK", side: "MIDLINE", shape: S.neck },
   { region: "UPPER_BACK", side: "MIDLINE", shape: S.torsoUpper },
@@ -62,14 +62,14 @@ const BACK: Zone[] = [
 ];
 
 const BACK_REGIONS = new Set<BodyRegion>(["UPPER_BACK", "LOWER_BACK"]);
-function naturalView(region: BodyRegion): View {
+export function naturalView(region: BodyRegion): View {
   return BACK_REGIONS.has(region) ? "BACK" : "FRONT";
 }
-function zonesFor(view: View) {
+export function zonesFor(view: View) {
   return view === "FRONT" ? FRONT : BACK;
 }
 
-function ShapeEl({
+export function ShapeEl({
   shape,
   className,
   onClick,

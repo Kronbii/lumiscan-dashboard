@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, Pencil, Plus, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { BodyMapOverview, type OverviewPin } from "@/components/body-map-overview";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,11 +17,37 @@ import {
 import { isFlaggedLabel } from "@/lib/enums";
 import { cn, formatDate, formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
+import { repo } from "@/server/db/scoped-repo";
 import { patientService } from "@/server/services/patient";
 import { lesionService } from "@/server/services/lesion";
 import { notFoundIfMissing } from "@/lib/rsc";
 
 export const dynamic = "force-dynamic";
+
+const riskSeverity: Record<string, number> = {
+  MALIGNANT: 3,
+  SUSPICIOUS: 2,
+  INCONCLUSIVE: 1,
+  BENIGN: 0,
+};
+
+function highestRisk(risks: Array<string | null>) {
+  let top: string | null = null;
+  for (const risk of risks) {
+    if (!risk) continue;
+    if (top === null || (riskSeverity[risk] ?? -1) > (riskSeverity[top] ?? -1)) top = risk;
+  }
+  return top;
+}
+
+function relativeDays(d: Date | null) {
+  if (!d) return "—";
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
 
 export default async function PatientDetailPage({
   params,
@@ -29,34 +56,43 @@ export default async function PatientDetailPage({
 }) {
   const { patientId } = await params;
   const ctx = await getOrgContext();
-  // patientService.getById throws NOT_FOUND for a missing/deleted patient, so
-  // the unchecked lesion list can skip its own redundant patient lookup — the
-  // two indexed queries then run in parallel instead of a 3-query waterfall.
-  const [patient, lesions] = await Promise.all([
+  const [patient, lesions, captureDates] = await Promise.all([
     patientService.getById(ctx, patientId),
     lesionService.listByPatientUnchecked(ctx, patientId),
+    repo(ctx).scans.listCaptureDates(),
   ]).catch(notFoundIfMissing);
   const name = `${patient.firstName} ${patient.lastName}`;
 
-  const details = [
-    { label: "MRN", value: patient.mrn, mono: true },
-    { label: "Date of birth", value: formatDate(patient.dateOfBirth), mono: true },
-    { label: "Registered", value: formatDate(patient.createdAt), mono: true },
-    patient.email ? { label: "Email", value: patient.email, mono: false } : null,
-    patient.phone ? { label: "Phone", value: patient.phone, mono: true } : null,
-    patient.address ? { label: "Address", value: patient.address, mono: false } : null,
-  ].filter(Boolean) as { label: string; value: string; mono: boolean }[];
+  const lesionIds = new Set(lesions.map((l) => l.id));
+  const lastByLesion = new Map<string, Date>();
+  for (const c of captureDates) {
+    if (!lesionIds.has(c.lesionId)) continue;
+    const cur = lastByLesion.get(c.lesionId);
+    if (!cur || c.capturedAt > cur) lastByLesion.set(c.lesionId, c.capturedAt);
+  }
+  const patientLastScan =
+    [...lastByLesion.values()].sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-  // Column count must match the cell count exactly — a ragged seam grid
-  // exposes empty border-colored cells.
-  const fasciaCols =
-    {
-      3: "xl:grid-cols-3",
-      4: "xl:grid-cols-4",
-      5: "xl:grid-cols-5",
-      6: "xl:grid-cols-6",
-    }[details.length] ?? "xl:grid-cols-3";
-  const lastCellSpan = details.length % 2 === 1 ? "col-span-2 xl:col-span-1" : "";
+  const flaggedCount = lesions.filter((l) => isFlaggedLabel(l.currentRisk)).length;
+  const topRisk = highestRisk(lesions.map((l) => l.currentRisk));
+  const mappedCount = lesions.filter((l) => l.bodyMapX != null && l.bodyMapY != null).length;
+
+  const register = [...lesions].sort(
+    (a, b) =>
+      (b.currentRisk ? riskSeverity[b.currentRisk] ?? -1 : -1) -
+        (a.currentRisk ? riskSeverity[a.currentRisk] ?? -1 : -1) ||
+      b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+
+  const pins: OverviewPin[] = lesions.map((l) => ({
+    id: l.id,
+    region: l.bodyRegion,
+    x: l.bodyMapX,
+    y: l.bodyMapY,
+    risk: l.currentRisk,
+    site: formatLesionSite(l.bodySide, l.bodyRegion),
+    href: `/app/patients/${patientId}/lesions/${l.id}`,
+  }));
 
   return (
     <div className="grid gap-8">
@@ -67,9 +103,7 @@ export default async function PatientDetailPage({
               ← Patients
             </Link>
             <span aria-hidden>·</span>
-            <span>
-              MRN {patient.mrn} · Registered {formatDate(patient.createdAt)}
-            </span>
+            <span>MRN {patient.mrn}</span>
           </span>
         }
         title={
@@ -95,115 +129,167 @@ export default async function PatientDetailPage({
       />
 
       <section className="grid gap-3">
-        <SectionLabel index="01" title="PATIENT RECORD" />
-        <Fascia className={cn("grid-cols-2", fasciaCols)}>
-          {details.map((d, i) => (
-            <div
-              key={d.label}
+        <SectionLabel index="01" title="Overview" />
+        <Fascia className="grid-cols-2 sm:grid-cols-4">
+          <div className="bg-surface px-4 py-3">
+            <Overline>Monitored lesions</Overline>
+            <Datum className="mt-1 block text-lg font-medium text-foreground">
+              {lesions.length}
+            </Datum>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <Overline>Flagged</Overline>
+            <Datum
               className={cn(
-                "min-w-0 bg-surface px-4 py-3",
-                i === details.length - 1 && lastCellSpan,
+                "mt-1 block text-lg font-medium",
+                flaggedCount > 0 ? "text-suspicious" : "text-foreground",
               )}
             >
-              <Overline>{d.label}</Overline>
-              {d.mono ? (
-                <Datum className="mt-1 block truncate text-[0.8125rem] text-foreground">
-                  {d.value}
-                </Datum>
+              {flaggedCount}
+            </Datum>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <Overline>Highest risk</Overline>
+            <div className="mt-1.5">
+              {topRisk ? (
+                <StatusChip label={topRisk} tone={classificationTone(topRisk)} />
               ) : (
-                <p className="mt-1 truncate text-[0.8125rem] text-foreground">
-                  {d.value}
-                </p>
+                <Datum className="text-sm text-faint">—</Datum>
               )}
+            </div>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <Overline>Last scan</Overline>
+            <Datum className="mt-1 block text-[0.8125rem] text-foreground">
+              {relativeDays(patientLastScan)}
+            </Datum>
+          </div>
+        </Fascia>
+      </section>
+
+      <div className="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <section className="grid h-fit gap-3 lg:sticky lg:top-16">
+          <SectionLabel index="02" title="Lesion map" />
+          {lesions.length > 0 ? (
+            <Card>
+              <CardContent>
+                <BodyMapOverview lesions={pins} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-[0.8125rem] text-muted">
+                No lesions to map yet.
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        <section className="grid h-fit gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <SectionLabel index="03" title="Monitored lesions" />
+            <Datum className="text-xs text-faint">
+              {String(lesions.length).padStart(2, "0")} tracked · {String(mappedCount).padStart(2, "0")} mapped
+            </Datum>
+          </div>
+
+          {lesions.length === 0 ? (
+            <Card>
+              <EmptyState
+                icon={ScanLine}
+                title="No lesions recorded"
+                description="Add a lesion to begin tracking scans and change over time."
+                action={
+                  <Button asChild size="sm">
+                    <Link href={`/app/patients/${patient.id}/lesions/new`}>
+                      <Plus strokeWidth={1.75} /> New lesion
+                    </Link>
+                  </Button>
+                }
+              />
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {register.map((lesion) => {
+                const flagged = isFlaggedLabel(lesion.currentRisk);
+                const last = lastByLesion.get(lesion.id) ?? null;
+                return (
+                  <Link
+                    key={lesion.id}
+                    href={`/app/patients/${patient.id}/lesions/${lesion.id}`}
+                    className="group"
+                  >
+                    <Card
+                      interactive
+                      className={cn(
+                        "h-full",
+                        flagged &&
+                          (lesion.currentRisk === "MALIGNANT"
+                            ? "border-l-2 border-l-malignant"
+                            : "border-l-2 border-l-suspicious"),
+                      )}
+                    >
+                      <CardContent className="flex h-full flex-col gap-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-semibold text-foreground">
+                            {formatLesionSite(lesion.bodySide, lesion.bodyRegion)}
+                          </p>
+                          {lesion.currentRisk ? (
+                            <StatusChip
+                              label={lesion.currentRisk}
+                              tone={classificationTone(lesion.currentRisk)}
+                            />
+                          ) : (
+                            <StatusChip label="NO SCANS" tone="neutral" />
+                          )}
+                        </div>
+                        <p className="line-clamp-2 flex-1 text-[0.8125rem] text-muted">
+                          {lesion.bodyLocationNote}
+                        </p>
+                        <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
+                          <Datum className="text-[0.6875rem] uppercase tracking-[0.06em] text-faint">
+                            Last scan {relativeDays(last)}
+                          </Datum>
+                          <span className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                            Timeline
+                            <ChevronRight className="size-3.5" strokeWidth={1.75} />
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="grid gap-3">
+        <SectionLabel index="04" title="Patient record" />
+        <Fascia className="grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "MRN", value: patient.mrn },
+            { label: "Date of birth", value: formatDate(patient.dateOfBirth) },
+            { label: "Registered", value: formatDate(patient.createdAt) },
+            { label: "Email", value: patient.email || "—" },
+            { label: "Phone", value: patient.phone || "—" },
+            { label: "Address", value: patient.address || "—" },
+          ].map((d) => (
+            <div key={d.label} className="min-w-0 bg-surface px-4 py-3">
+              <Overline>{d.label}</Overline>
+              <Datum className="mt-1 block truncate text-[0.8125rem] text-foreground">
+                {d.value}
+              </Datum>
             </div>
           ))}
           {patient.notes ? (
             <div className="col-span-full bg-surface px-4 py-3">
               <Overline>Notes</Overline>
-              <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">
-                {patient.notes}
-              </p>
+              <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">{patient.notes}</p>
             </div>
           ) : null}
         </Fascia>
-      </section>
-
-      <section className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <SectionLabel index="02" title="MONITORED LESIONS" />
-          <Datum className="text-xs text-faint">
-            {String(lesions.length).padStart(2, "0")} TRACKED
-          </Datum>
-        </div>
-
-        {lesions.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={ScanLine}
-              title="No lesions recorded"
-              description="Add a lesion to begin tracking scans and change over time."
-              action={
-                <Button asChild size="sm">
-                  <Link href={`/app/patients/${patient.id}/lesions/new`}>
-                    <Plus strokeWidth={1.75} /> New lesion
-                  </Link>
-                </Button>
-              }
-            />
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {lesions.map((lesion) => {
-              const flagged = isFlaggedLabel(lesion.currentRisk);
-              return (
-                <Link
-                  key={lesion.id}
-                  href={`/app/patients/${patient.id}/lesions/${lesion.id}`}
-                  className="group"
-                >
-                  <Card
-                    interactive
-                    className={cn(
-                      "h-full",
-                      flagged &&
-                        (lesion.currentRisk === "MALIGNANT"
-                          ? "border-l-2 border-l-malignant"
-                          : "border-l-2 border-l-suspicious"),
-                    )}
-                  >
-                    <CardContent className="flex h-full flex-col gap-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatLesionSite(lesion.bodySide, lesion.bodyRegion)}
-                        </p>
-                        {lesion.currentRisk ? (
-                          <StatusChip
-                            label={lesion.currentRisk}
-                            tone={classificationTone(lesion.currentRisk)}
-                          />
-                        ) : (
-                          <StatusChip label="NO SCANS" tone="neutral" />
-                        )}
-                      </div>
-                      <p className="line-clamp-2 flex-1 text-[0.8125rem] text-muted">
-                        {lesion.bodyLocationNote}
-                      </p>
-                      <div className="flex items-center justify-between gap-3 border-t border-border pt-2.5">
-                        <Datum className="text-[0.6875rem] uppercase tracking-[0.06em] text-faint">
-                          Added {formatDate(lesion.createdAt)}
-                        </Datum>
-                        <span className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                          View timeline
-                          <ChevronRight className="size-3.5" strokeWidth={1.75} />
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </section>
     </div>
   );
