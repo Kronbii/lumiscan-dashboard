@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { createLesionAction } from "@/app/app/actions";
+import { BodyMapField } from "@/components/body-map-field";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { Fascia, SectionLabel } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
-import { bodyRegions, bodySides } from "@/lib/enums";
-import { humanize } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { patientService } from "@/server/services/patient";
 import { notFoundIfMissing } from "@/lib/rsc";
@@ -41,26 +40,7 @@ export default async function NewLesionPage({
         <Fascia className="grid-cols-1">
           <section className="grid gap-4 bg-surface p-5">
             <SectionLabel index="01" title="Anatomical site" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Body region">
-                <select className={inputClass} name="bodyRegion" required>
-                  {bodyRegions.map((region) => (
-                    <option key={region} value={region}>
-                      {humanize(region)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Side">
-                <select className={inputClass} name="bodySide" required>
-                  {bodySides.map((side) => (
-                    <option key={side} value={side}>
-                      {humanize(side)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+            <BodyMapField />
             <Field
               label="Precise location"
               hint="e.g. 4 cm inferior to the left scapula"

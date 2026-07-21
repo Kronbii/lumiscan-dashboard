@@ -14,6 +14,13 @@ function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function num(formData: FormData, key: string): number | undefined {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 // Switch the simulated persona (no real auth). Writes the actor cookie and
 // re-renders the whole shell so every screen reflects the chosen identity/role.
 export async function setActingPersonaAction(membershipId: string) {
@@ -74,6 +81,8 @@ export async function createLesionAction(patientId: string, formData: FormData) 
     bodyRegion: text(formData, "bodyRegion") as never,
     bodySide: text(formData, "bodySide") as never,
     bodyLocationNote: text(formData, "bodyLocationNote"),
+    bodyMapX: num(formData, "bodyMapX"),
+    bodyMapY: num(formData, "bodyMapY"),
     description: text(formData, "description"),
   });
   revalidatePath(`/app/patients/${patientId}`);
@@ -92,6 +101,8 @@ export async function updateLesionAction(
     bodyRegion: text(formData, "bodyRegion") as never,
     bodySide: text(formData, "bodySide") as never,
     bodyLocationNote: text(formData, "bodyLocationNote"),
+    bodyMapX: num(formData, "bodyMapX"),
+    bodyMapY: num(formData, "bodyMapY"),
     description: text(formData, "description"),
   });
   revalidatePath(`/app/patients/${patientId}`);

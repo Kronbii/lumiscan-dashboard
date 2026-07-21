@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { deleteLesionAction, updateLesionAction } from "@/app/app/actions";
+import { BodyMapField } from "@/components/body-map-field";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/confirm-action";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { Fascia, SectionLabel } from "@/components/ui/instrument";
 import { PageHeader } from "@/components/ui/page-header";
-import { bodyRegions, bodySides } from "@/lib/enums";
-import { formatLesionSite, humanize } from "@/lib/utils";
+import { formatLesionSite } from "@/lib/utils";
 import { getOrgContext } from "@/server/auth/org-context";
 import { lesionService } from "@/server/services/lesion";
 import { notFoundIfMissing } from "@/lib/rsc";
@@ -42,26 +42,12 @@ export default async function EditLesionPage({
         <Fascia className="grid-cols-1">
           <section className="grid gap-4 bg-surface p-5">
             <SectionLabel index="01" title="Anatomical site" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Body region">
-                <select className={inputClass} name="bodyRegion" defaultValue={lesion.bodyRegion} required>
-                  {bodyRegions.map((region) => (
-                    <option key={region} value={region}>
-                      {humanize(region)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Side">
-                <select className={inputClass} name="bodySide" defaultValue={lesion.bodySide} required>
-                  {bodySides.map((side) => (
-                    <option key={side} value={side}>
-                      {humanize(side)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+            <BodyMapField
+              defaultRegion={lesion.bodyRegion}
+              defaultSide={lesion.bodySide}
+              defaultX={lesion.bodyMapX}
+              defaultY={lesion.bodyMapY}
+            />
             <Field label="Precise location" hint="e.g. 4 cm inferior to the left scapula">
               <input
                 className={inputClass}

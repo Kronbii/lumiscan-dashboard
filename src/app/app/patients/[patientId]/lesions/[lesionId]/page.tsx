@@ -14,6 +14,7 @@ import {
   addManagementNoteAction,
   setManagementStatusAction,
 } from "@/app/app/actions";
+import { BodyMapField } from "@/components/body-map-field";
 import { GenerateInsightButton } from "@/app/app/patients/[patientId]/lesions/[lesionId]/generate-insight-button";
 import { LesionTimelineClient } from "@/app/app/patients/[patientId]/lesions/[lesionId]/timeline-client";
 import { managementStatuses } from "@/lib/enums";
@@ -99,6 +100,21 @@ export default async function LesionDetailPage({
         <LesionTimelineClient data={timeline} />
 
         <aside className="grid h-fit gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BodyMapField
+                readOnly
+                defaultRegion={timeline.lesion.bodyRegion}
+                defaultSide={timeline.lesion.bodySide}
+                defaultX={timeline.lesion.bodyMapX}
+                defaultY={timeline.lesion.bodyMapY}
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>AI insight</CardTitle>
