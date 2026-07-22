@@ -9,6 +9,13 @@ import { lesionService } from "@/server/services/lesion";
 import { managementService } from "@/server/services/management";
 import { deviceService } from "@/server/services/device";
 import { generateInsight } from "@/server/ai/insights";
+import { canManageOrg } from "@/server/auth/require-role";
+import type { UserRole } from "@/lib/enums";
+import {
+  createMember,
+  deactivateMembership,
+  setMembershipRole,
+} from "@/server/db/system-repo";
 
 export type ActionState = { ok: boolean; error?: string };
 
@@ -235,6 +242,48 @@ export async function generateScanInsightAction(
   }
   revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}/scans/${scanId}`);
   return { ok: true };
+}
+
+export async function addMemberAction(formData: FormData): Promise<ActionState> {
+  const ctx = await getOrgContext();
+  if (!canManageOrg(ctx.role)) return { ok: false, error: "Only owners and admins can add members." };
+  const displayName = text(formData, "displayName");
+  const email = text(formData, "email");
+  const role = text(formData, "role") as UserRole;
+  if (!displayName || !email) return { ok: false, error: "Name and email are required." };
+  try {
+    await createMember(ctx.orgId, { displayName, email, role: role || "DOCTOR" });
+  } catch {
+    return { ok: false, error: "Couldn't add the member (email may already exist)." };
+  }
+  revalidatePath("/app/settings/members");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function setMemberRoleAction(
+  membershipId: string,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getOrgContext();
+  if (!canManageOrg(ctx.role)) return { ok: false, error: "Only owners and admins can change roles." };
+  try {
+    await setMembershipRole(ctx.orgId, membershipId, text(formData, "role") as UserRole);
+  } catch {
+    return { ok: false, error: "Couldn't change the role." };
+  }
+  revalidatePath("/app/settings/members");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function removeMemberAction(membershipId: string) {
+  const ctx = await getOrgContext();
+  if (!canManageOrg(ctx.role)) return;
+  if (membershipId === ctx.membershipId) return; // don't remove yourself
+  await deactivateMembership(ctx.orgId, membershipId);
+  revalidatePath("/app/settings/members");
+  revalidatePath("/", "layout");
 }
 
 export async function createDeviceAction(formData: FormData) {

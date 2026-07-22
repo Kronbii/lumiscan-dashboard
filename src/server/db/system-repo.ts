@@ -68,6 +68,46 @@ export async function listOrgMembers(orgId: string) {
     .where(and(eq(memberships.orgId, orgId), eq(memberships.status, "ACTIVE")));
 }
 
+export async function createMember(
+  orgId: string,
+  input: { displayName: string; email: string; role: UserRole },
+) {
+  const user = await upsertUser({
+    clerkUserId: `member_${uuidv7()}`,
+    email: input.email,
+    displayName: input.displayName,
+  });
+  const membership = await upsertMembership({
+    orgId,
+    userId: user.id,
+    role: input.role,
+    status: "ACTIVE",
+  });
+  return { user, membership };
+}
+
+export async function setMembershipRole(
+  orgId: string,
+  membershipId: string,
+  role: UserRole,
+) {
+  const [membership] = await db
+    .update(memberships)
+    .set({ role, updatedAt: new Date() })
+    .where(and(eq(memberships.orgId, orgId), eq(memberships.id, membershipId)))
+    .returning();
+  return membership ?? null;
+}
+
+export async function deactivateMembership(orgId: string, membershipId: string) {
+  const [membership] = await db
+    .update(memberships)
+    .set({ status: "INACTIVE", updatedAt: new Date() })
+    .where(and(eq(memberships.orgId, orgId), eq(memberships.id, membershipId)))
+    .returning();
+  return membership ?? null;
+}
+
 export async function findOrganizationByClerkId(clerkOrgId: string) {
   const [organization] = await db
     .select()
