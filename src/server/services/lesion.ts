@@ -139,6 +139,17 @@ export const lesionService = {
     return lesion;
   },
 
+  async setBaseline(ctx: OrgContext, lesionId: string, scanId: string) {
+    const lesion = await repo(ctx).lesions.setBaseline(lesionId, scanId);
+    await audit(ctx, {
+      action: "lesion.baseline",
+      resourceType: "lesion",
+      resourceId: lesion.id,
+      metadata: { baselineScanId: scanId },
+    });
+    return lesion;
+  },
+
   async timeline(ctx: OrgContext, lesionId: string) {
     const scoped = repo(ctx);
     const lesion = await scoped.lesions.getById(lesionId);

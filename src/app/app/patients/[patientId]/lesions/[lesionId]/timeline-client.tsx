@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { ImageOff, ScanLine } from "lucide-react";
+import { setBaselineAction } from "@/app/app/actions";
+import { useToast } from "@/components/toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Datum,
@@ -59,7 +61,7 @@ export type TimelineClientData = {
     string,
     Array<{ scanId: string; capturedAt: string; value: number; label: Point["label"] }>
   >;
-  lesion: { bodySide: string; bodyRegion: string };
+  lesion: { bodySide: string; bodyRegion: string; baselineScanId?: string | null };
 };
 
 /* Trend is not a classification — tones map to clinical risk, and the word
@@ -192,14 +194,31 @@ export function LesionTimelineClient({
   patientId?: string;
   lesionId?: string;
 }) {
+  const baselineScanId = data.lesion.baselineScanId ?? null;
+  const baselineIndex = baselineScanId
+    ? data.points.findIndex((p) => p.scanId === baselineScanId)
+    : -1;
+  const baselinePoint = baselineIndex >= 0 ? data.points[baselineIndex] : null;
+
   const [mode, setMode] = useState<"timeline" | "trends" | "compare">("timeline");
-  const [compareA, setCompareA] = useState(0);
+  const [compareA, setCompareA] = useState(baselineIndex >= 0 ? baselineIndex : 0);
   const [compareB, setCompareB] = useState(Math.max(0, data.points.length - 1));
   const [compareView, setCompareView] = useState<"overlay" | "side">("overlay");
   const [lightboxScanId, setLightboxScanId] = useState<string | null>(null);
+  const [, startBaseline] = useTransition();
+  const { show } = useToast();
   const latest = data.points.at(-1);
   const a = data.points[compareA];
   const b = data.points[compareB];
+
+  function markBaseline(scanId: string, capturedAt: string) {
+    if (!patientId || !lesionId) return;
+    startBaseline(async () => {
+      const result = await setBaselineAction(patientId, lesionId, scanId);
+      if (result.ok) show({ tone: "success", title: "Baseline set", detail: formatDate(capturedAt) });
+      else show({ tone: "critical", title: "Couldn't set baseline" });
+    });
+  }
 
   const site = formatLesionSite(data.lesion.bodySide, data.lesion.bodyRegion);
   const imagedScans: LightboxScan[] = useMemo(
@@ -386,10 +405,12 @@ export function LesionTimelineClient({
                   />
                   <Card
                     className={cn(
-                      flagged &&
-                        (point.label === "MALIGNANT"
-                          ? "border-l-2 border-l-malignant"
-                          : "border-l-2 border-l-suspicious"),
+                      point.scanId === baselineScanId
+                        ? "border-l-2 border-l-primary"
+                        : flagged &&
+                            (point.label === "MALIGNANT"
+                              ? "border-l-2 border-l-malignant"
+                              : "border-l-2 border-l-suspicious"),
                     )}
                   >
                     <CardContent className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
@@ -420,6 +441,9 @@ export function LesionTimelineClient({
                               confidence={formatPercent(point.confidence)}
                             />
                             <StatusChip tone="neutral" label={point.source} />
+                            {point.scanId === baselineScanId ? (
+                              <StatusChip tone="accent" label="BASELINE" />
+                            ) : null}
                             {point.partialData ? (
                               <StatusChip tone="suspicious" label="PARTIAL DATA" />
                             ) : null}
@@ -476,14 +500,42 @@ export function LesionTimelineClient({
                             </>
                           )}
                         </p>
-                        {patientId && lesionId ? (
-                          <Link
-                            href={`/app/patients/${patientId}/lesions/${lesionId}/scans/${point.scanId}`}
-                            className="datum text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-primary hover:underline"
-                          >
-                            Scan detail →
-                          </Link>
-                        ) : null}
+                        {baselinePoint && point.scanId !== baselineScanId
+                          ? (() => {
+                              const cur = point.metrics["diameter_mm"];
+                              const base = baselinePoint.metrics["diameter_mm"];
+                              if (typeof cur !== "number" || typeof base !== "number") return null;
+                              const d = Number((cur - base).toFixed(2));
+                              return (
+                                <p className="datum text-[0.6875rem] uppercase tracking-[0.06em] text-faint">
+                                  vs baseline · diameter{" "}
+                                  <span className={d > 0 ? "text-malignant" : d < 0 ? "text-benign" : "text-muted"}>
+                                    {d > 0 ? "+" : ""}
+                                    {d} mm
+                                  </span>
+                                </p>
+                              );
+                            })()
+                          : null}
+                        <div className="flex flex-wrap items-center gap-3">
+                          {patientId && lesionId ? (
+                            <Link
+                              href={`/app/patients/${patientId}/lesions/${lesionId}/scans/${point.scanId}`}
+                              className="datum text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-primary hover:underline"
+                            >
+                              Scan detail →
+                            </Link>
+                          ) : null}
+                          {patientId && lesionId && point.scanId !== baselineScanId ? (
+                            <button
+                              type="button"
+                              onClick={() => markBaseline(point.scanId, point.capturedAt)}
+                              className="datum text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted transition-colors hover:text-foreground"
+                            >
+                              Set baseline
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

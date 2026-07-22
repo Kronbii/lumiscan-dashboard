@@ -244,6 +244,16 @@ function createScopedRepo(ctx: OrgContext, client: ScopedDb) {
         return lesion;
       },
 
+      async setBaseline(lesionId: string, scanId: string) {
+        const [updated] = await client
+          .update(lesions)
+          .set({ baselineScanId: scanId, updatedAt: new Date() })
+          .where(activeLesion(lesionId))
+          .returning();
+        if (!updated) throw notFound();
+        return updated;
+      },
+
       async setRiskAndBaseline(input: {
         lesionId: string;
         currentRisk: ClassificationLabel;

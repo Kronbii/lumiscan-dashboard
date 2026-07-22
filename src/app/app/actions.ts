@@ -112,6 +112,21 @@ export async function updateLesionAction(
   redirect(`/app/patients/${patientId}/lesions/${lesionId}`);
 }
 
+export async function setBaselineAction(
+  patientId: string,
+  lesionId: string,
+  scanId: string,
+): Promise<ActionState> {
+  const ctx = await getOrgContext();
+  try {
+    await lesionService.setBaseline(ctx, lesionId, scanId);
+  } catch {
+    return { ok: false, error: "Couldn't set the baseline." };
+  }
+  revalidatePath(`/app/patients/${patientId}/lesions/${lesionId}`);
+  return { ok: true };
+}
+
 export async function deleteLesionAction(patientId: string, lesionId: string) {
   const ctx = await getOrgContext();
   await lesionService.softDelete(ctx, lesionId);
