@@ -1,15 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { imagePresignPayloadSchema } from "@/lib/schemas/ingest";
 import { createDeviceOrgContext } from "@/server/auth/org-context";
+import { repo } from "@/server/db/scoped-repo";
+import { ingestErrorResponse } from "@/server/http/ingest-error";
 import { authenticateDeviceKey } from "@/server/services/device";
 import { createUploadUrl } from "@/server/storage/presign";
-
-function statusFor(error: unknown) {
-  if (!(error instanceof TRPCError)) return 500;
-  if (error.code === "UNAUTHORIZED") return 401;
-  if (error.code === "TOO_MANY_REQUESTS") return 429;
-  return 400;
-}
 
 export async function POST(req: Request) {
   try {
@@ -19,16 +14,21 @@ export async function POST(req: Request) {
       orgId: device.orgId,
       deviceId: device.id,
     });
-    return Response.json(await createUploadUrl(ctx, payload));
+
+    // A device that only knows the patient's MRN (no lesionId) can still upload:
+    // resolve the patient here so createUploadUrl can build a lesion_pending path.
+    // The scan POST later attaches the image to the matched lesion.
+    let patientId: string | undefined;
+    if (!payload.lesionId && payload.mrn) {
+      const patient = await repo(ctx).patients.findByMrn(payload.mrn);
+      if (!patient) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "No patient with that MRN." });
+      }
+      patientId = patient.id;
+    }
+
+    return Response.json(await createUploadUrl(ctx, { ...payload, patientId }));
   } catch (error) {
-    return Response.json(
-      {
-        error: {
-          type: error instanceof TRPCError ? error.code : "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Invalid request.",
-        },
-      },
-      { status: statusFor(error) },
-    );
+    return ingestErrorResponse(error);
   }
 }

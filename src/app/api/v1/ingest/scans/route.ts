@@ -1,15 +1,7 @@
-import { TRPCError } from "@trpc/server";
 import { deviceIngestPayloadSchema } from "@/lib/schemas/ingest";
+import { ingestErrorResponse } from "@/server/http/ingest-error";
 import { authenticateDeviceKey } from "@/server/services/device";
 import { ingestionService } from "@/server/services/ingestion";
-
-function statusFor(error: unknown) {
-  if (!(error instanceof TRPCError)) return 500;
-  if (error.code === "UNAUTHORIZED") return 401;
-  if (error.code === "NOT_FOUND") return 404;
-  if (error.code === "TOO_MANY_REQUESTS") return 429;
-  return 400;
-}
 
 export async function POST(req: Request) {
   try {
@@ -29,14 +21,6 @@ export async function POST(req: Request) {
     });
     return Response.json(result, { status: 200 });
   } catch (error) {
-    return Response.json(
-      {
-        error: {
-          type: error instanceof TRPCError ? error.code : "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Invalid request.",
-        },
-      },
-      { status: statusFor(error) },
-    );
+    return ingestErrorResponse(error);
   }
 }

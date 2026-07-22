@@ -56,6 +56,9 @@ Responses:
 
 ## POST `/api/v1/ingest/images/presign`
 
+Identify the target by **`lesionId`** or, when the device only knows the patient,
+by **`mrn`** (one of the two is required):
+
 ```json
 {
   "lesionId": "00000000-0000-0000-0000-000000000000",
@@ -65,4 +68,15 @@ Responses:
 }
 ```
 
-Returns `{ "objectKey", "uploadUrl", "expiresInSeconds": 300 }`.
+```json
+{
+  "mrn": "DEMO-001",
+  "fileName": "scan.webp",
+  "contentType": "image/webp",
+  "contentLength": 123456
+}
+```
+
+Returns `{ "objectKey", "uploadUrl", "expiresInSeconds": 300 }`. An unknown `mrn`
+returns `404`; providing neither `lesionId` nor `mrn` returns `400`. `contentType`
+must be `image/jpeg`, `image/png`, or `image/webp`; `contentLength` ≤ 15 MB.

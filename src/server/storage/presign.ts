@@ -57,7 +57,7 @@ export async function createUploadUrl(
   if (!patientId) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "A patient or lesion reference is required.",
+      message: "Provide a lesionId or mrn to upload an image.",
     });
   }
 

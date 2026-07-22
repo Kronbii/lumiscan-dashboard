@@ -29,7 +29,10 @@ export const deviceIngestPayloadSchema = z
   });
 
 export const imagePresignPayloadSchema = z.object({
+  // A device identifies the upload target by lesionId, or by patient MRN when it
+  // only knows the MRN (barcode workflow). One of the two is required.
   lesionId: z.string().uuid().optional(),
+  mrn: z.string().trim().min(1).max(80).optional(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   fileName: z.string().trim().min(1).max(255),
   contentLength: z.number().int().positive().max(15 * 1024 * 1024),
